@@ -2,9 +2,10 @@
    <img src="https://www.f4team.cn/logo/logo-hdpi.png" alt="F4Team" />
 </center>
 
-# F4Pan 前端项目
+# F4Pan 前端
 
-后端项目在： [https://github.com/f4team-cn/f4pan](https://github.com/f4team-cn/f4pan)
+后端： [https://github.com/f4team-cn/f4pan](https://github.com/f4team-cn/f4pan)
+本仓库与后端仓库之前任意条款，开源协议通用！
 
 ## Modify Environment
 
