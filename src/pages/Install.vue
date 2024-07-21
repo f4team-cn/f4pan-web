@@ -212,7 +212,7 @@ const testRedis = async () => {
 									class="flex flex-column border-2 border-dashed surface-border border-round surface-ground px-3 py-3 flex-auto font-medium">
 									<p class="par">欢迎使用 <code>F4Pan</code>
 										安装程序，你在安装本程序前，应先阅读我们的<a
-											href="https://github.com/f4team-cn/F4Pan"
+											href="https://github.com/f4team-cn/f4pan"
 											target="_blank">开源协议及免责声明</a>，以防制造不必要的麻烦。
 										当你点击 <code>下一步</code> 按钮时，则代表你已经阅读并同意了我们的条款！
 									</p>
