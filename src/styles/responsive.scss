@@ -1,0 +1,69 @@
+@media screen and (min-width: 1960px) {
+	.layout-main, .landing-wrapper {
+		width: 1504px;
+		margin-left: auto !important;
+		margin-right: auto !important;
+	}
+}
+
+@media (max-width: 991px) {
+	.layout-toolbar {
+		justify-content: space-between;
+
+		.layout-toolbar-logo {
+			width: auto;
+			order: 2;
+		}
+
+		.layout-menu-button {
+			margin-left: 0;
+			order: 1;
+		}
+
+		.layout-toolbar-menu-button {
+			display: inline-flex;
+			margin-left: 0;
+			order: 3;
+		}
+
+		.layout-toolbar-menu {
+			margin-left: 0;
+			position: absolute;
+			flex-direction: column;
+			background-color: var(--surface-overlay);
+			box-shadow: 0 3px 5px rgba(0, 0, 0, .02), 0 0 2px rgba(0, 0, 0, .05), 0 1px 4px rgba(0, 0, 0, .08);
+			border-radius: 12px;
+			padding: 1rem;
+			right: 2rem;
+			top: 5rem;
+			min-width: 15rem;
+			display: none;
+			-webkit-animation: scalein 0.15s linear;
+			animation: scalein 0.15s linear;
+
+			&.layout-toolbar-menu-mobile-active {
+				display: block
+			}
+
+			.layout-toolbar-button {
+				margin-left: 0;
+				display: flex;
+				width: 100%;
+				height: auto;
+				justify-content: flex-start;
+				border-radius: 12px;
+				padding: 1rem;
+
+				i {
+					font-size: 1rem;
+					margin-right: .5rem;
+				}
+
+				span {
+					font-weight: 200;
+					display: block;
+				}
+			}
+		}
+	}
+}
