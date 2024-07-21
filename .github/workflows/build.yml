@@ -1,0 +1,33 @@
+name: Build and Package
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+
+      - name: Install dependencies
+        run: |
+          npm install -g yarn
+          yarn install
+
+      - name: Build projext
+        run: yarn build
+
+      - name: Package dist folder
+        run: zip -r dist.zip dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist.zip
+          path: dist.zip
