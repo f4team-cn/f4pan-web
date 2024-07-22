@@ -140,7 +140,7 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 	if (m.type === 'progress') {
 		const low = (m.max ? m.max : 1) - (m.n ? m.n : 0) + 1;
 		const single = 100 / low;
-		progress.value = Math.floor(progress.value + single);
+		progress.value = Math.floor(single);
 		return;
 	}
 	if (m.type === 'success') {
