@@ -44,10 +44,12 @@ function doParse(data: WorkerRequestBody, n: number, max: number) {
 		}
 	}).finally(() => {
 		if (n >= max) {
-			Main.postMessage({
-				type: 'done',
-				n, max
-			} as WorkerResponse);
+			setTimeout(() => {
+				Main.postMessage({
+					type: 'done',
+					n, max
+				} as WorkerResponse);
+			}, 500);
 		} else {
 			Main.postMessage({
 				type: 'progress',

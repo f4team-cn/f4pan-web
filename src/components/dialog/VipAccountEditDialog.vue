@@ -82,6 +82,7 @@ const getAndSaveCookie = async (v: string) => {
 };
 
 const checkQrCode = async () => {
+	if (stringIsEmpty(qrcode.value.sign)) return;
 	try {
 		controller = new AbortController();
 		const {data: response} = await unicastQrCode(qrcode.value.sign, controller.signal);
@@ -92,7 +93,8 @@ const checkQrCode = async () => {
 		} else {
 			throw new Error();
 		}
-	} catch {
+	} catch (e) {
+		console.error(e);
 		checkQrCode().then(undefined);
 	}
 };

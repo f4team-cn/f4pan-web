@@ -107,6 +107,8 @@ const start = () => {
 		message.warn('请选择下载方式！');
 		return;
 	}
+	// 清除缓存
+	results.length = 0;
 	blocked.value = true;
 	starting.value = true;
 	dialogStore.interceptUnload = true;
@@ -121,9 +123,6 @@ const stop = () => {
 	blocked.value = false;
 	starting.value = false;
 	dialogStore.interceptUnload = false;
-
-	// 清除缓存
-	results.slice(0, results.length);
 };
 
 const onWorkerMessage = async (m: WorkerResponse) => {
