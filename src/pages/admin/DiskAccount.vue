@@ -129,7 +129,7 @@ onMounted(refresh);
 						<template #body="{ data }">
 							<p>
 								<Tag severity="success" v-if="data.show_msg === '可用'">可用</Tag>
-								<Tag severity="danger" v-else-if="data.show_msg === '过期'">可用</Tag>
+								<Tag severity="danger" v-else-if="data.show_msg === '过期'">过期</Tag>
 								<Tag v-else>限速</Tag>
 							</p>
 						</template>
@@ -153,7 +153,7 @@ onMounted(refresh);
 					</Column>
 					<Column header="操作" headerStyle="width:4rem">
 						<template #body="item">
-							<Button icon="pi pi-pen" severity="info" rounded class="mb-2 mr-2" :loading="loading"
+							<Button icon="pi pi-pencil" severity="info" rounded class="mb-2 mr-2" :loading="loading"
 							        @click="onChangeAccount(item.data)"/>
 							<Button icon="pi pi-trash" severity="danger" rounded class="mb-2 mr-2" :loading="loading"
 							        @click="onDeleteVipAccount($event, item.data)"/>

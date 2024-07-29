@@ -54,6 +54,15 @@ export default [{
 				title: '系统管理',
 				icon: 'pi pi-cog'
 			}
+		},
+		{
+			path: 'api-key',
+			component: () => import('@/pages/admin/ApiKey.vue'),
+			name: 'ApiKey',
+			meta: {
+				title: '密钥管理',
+				icon: 'pi pi-key'
+			}
 		}
 	]
 }, {

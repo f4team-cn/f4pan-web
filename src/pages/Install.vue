@@ -152,7 +152,8 @@ const buildInstallQuery = () => {
 	}
 	for (let key in redisConfig) {
 		if (isValidKey(key, redisConfig)) {
-			query[`redis_${key}`] = mysqlConfig[key] || '';
+			// 对不起 我的问题
+			query[`redis_${key}`] = redisConfig[key] || '';
 		}
 	}
 	return query;

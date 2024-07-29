@@ -6,7 +6,7 @@ interface Result {
 export function parseBaiduShareUrl(value: string): Result {
 	const result: Result = {};
 	const regex = /https?:\/\/(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(),]|%[0-9a-fA-F][0-9a-fA-F])+/;
-	const codeRegex = /提取码([:：])(([a-zA-Z]|[0-9]){4})/;
+	const codeRegex = /提取码([:：])\s*(([a-zA-Z]|[0-9]){4})/;
 	// 数据验证
 	if (!regex.test(value)) return result;
 	let baiduUrl = regex.exec(value)?.[0];

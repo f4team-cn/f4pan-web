@@ -23,7 +23,7 @@ instance.interceptors.response.use(response => {
 	if (ignore) return response;
 	const {data} = response;
 	const message = useMessage();
-	if (data.code === -1) {
+	if (data.code !== 200 && data.code !== 1) {
 		message.warn(data.message);
 		return Promise.reject();
 	} else if (data.code >= 400) {

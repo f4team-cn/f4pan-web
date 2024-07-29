@@ -8,11 +8,13 @@ interface SystemConfig {
 	notice_id: number;
 	parse_ua: string;
 	notice: Notice;
+	isInit: boolean;
 }
 
 export const useSystemConfigStore = defineStore('system-config-store', {
 	state(): SystemConfig {
 		return {
+			isInit: false,
 			requires_key: 'dynamic',
 			notice_id: 0,
 			parse_ua: '',
@@ -32,8 +34,11 @@ export const useSystemConfigStore = defineStore('system-config-store', {
 			this.parse_ua = response.parse_ua;
 			this.notice_id = Number(response.notice_id);
 			// 公告
-			const {data} = await getNotice(this.notice_id);
-			this.notice = data.data;
+			if (this.notice_id > 0) {
+				const {data} = await getNotice(this.notice_id);
+				this.notice = data.data;
+			}
+			this.isInit = true;
 		}
 	}
 });

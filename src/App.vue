@@ -10,6 +10,7 @@ import {computed} from 'vue';
 import {storeToRefs} from 'pinia';
 import GithubCorners from '@/components/GithubCorners.vue';
 import {router} from '@/router';
+import {stringIsEmpty} from '@/utils/string-is-empty';
 const message = useMessage(); // 挂载对象
 
 const systemConfigStore = useSystemConfigStore();
@@ -21,9 +22,13 @@ const visible = computed({
 });
 
 // 初始化系统配置
-systemConfigStore.init().catch(e => {
+systemConfigStore.init().catch(() => {
 	if (router.currentRoute.value.name !== 'Install') {
 		message.error('系统错误！');
+	}
+}).then(() => {
+	if (!stringIsEmpty(systemConfigStore.notice.content) || !stringIsEmpty(systemConfigStore.notice.title)) {
+		visible.value = true;
 	}
 });
 

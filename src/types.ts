@@ -132,7 +132,13 @@ export type RedisConfig = {
 	hostname: string;
 	port: string;
 	password: string;
-}
+};
+
+export type ApiKey = {
+	id: number;
+	key: string;
+	use_count: number;
+};
 
 // ===================== 工具
 
@@ -178,6 +184,11 @@ export type GetCookieResponse = BaseResponse<{ cookie: string; }>;
 export type CheckEnvironmentResponse = BaseResponse<EnvironmentData>;
 
 export type TestConnectionResponse = BaseResponse<string | undefined>;
+
+export type IPCountResponse = BaseResponse<{ ip_type: number, all_count: number }>;
+
+export type ApiKeyListResponse = BaseResponse<ApiKey[]>;
+export type DeleteApiKeyResponse = BaseResponse<never>;
 
 // ====================== WebWorker 类型
 
