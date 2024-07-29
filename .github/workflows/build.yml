@@ -10,24 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
 
       - name: Install dependencies
         run: |
           npm install -g yarn
           yarn install
 
-      - name: Build projext
+      - name: Build project
         run: yarn build
 
-      - name: Package dist folder
-        run: zip -r dist.zip dist
-
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: dist.zip
-          path: dist.zip
+          name: Index
+          path: dist
