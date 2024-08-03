@@ -29,7 +29,8 @@ function doParse(data: WorkerRequestBody, n: number, max: number) {
 	request<ParseFileResponse>({
 		url: '/v1/parse/parse_file',
 		params: query,
-		ignore: true
+		ignore: true,
+		timeout: 1000 * 60 * 3
 	}).then(res => {
 		if (res.data.code === 200) {
 			Main.postMessage({
