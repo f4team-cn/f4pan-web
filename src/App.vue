@@ -6,11 +6,12 @@ import ConfirmPopup from 'primevue/confirmpopup';
 import Dialog from 'primevue/dialog';
 import AdminLoginDialog from '@/components/dialog/AdminLoginDialog.vue';
 import ParseVerifyDialog from '@/components/dialog/ParseVerifyDialog.vue';
-import {computed} from 'vue';
+import {computed, watch} from 'vue';
 import {storeToRefs} from 'pinia';
 import GithubCorners from '@/components/GithubCorners.vue';
 import {router} from '@/router';
 import {stringIsEmpty} from '@/utils/string-is-empty';
+import {actionOne} from '@/utils/show-driver';
 const message = useMessage(); // 挂载对象
 
 const systemConfigStore = useSystemConfigStore();
@@ -38,6 +39,13 @@ window.addEventListener('beforeunload', (e) => {
 	}
 	e.preventDefault();
 	e.returnValue = true;
+});
+
+watch(visible, (val) => {
+	if (val) return;
+	if (window.localStorage.getItem('driver-step-done') !== 'true') {
+		actionOne();
+	}
 });
 </script>
 

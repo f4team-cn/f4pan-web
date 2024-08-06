@@ -1,15 +1,17 @@
 import type {ParseFileResponse, WorkerRequestBody, WorkerResponse} from '@/types';
 import request from '@/utils/request';
+import delay from '@/utils/delay';
 
 const Main = self;
 
-Main.onmessage = function (e) {
+Main.onmessage = async function (e) {
 	const data = e.data || {};
 	if (data.type === 'add') {
 		const files = data.body || [];
 		const max = files.length || 0;
 		if (max === 0) return;
 		for (let i = 0; i < files.length; i++) {
+			await delay(1400);
 			doParse(files[i], i + 1, max);
 		}
 	}

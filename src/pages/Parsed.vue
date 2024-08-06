@@ -23,6 +23,8 @@ import type {ParsedFile, ShareInfo, TreeFileInfo, WorkerRequestBody, WorkerRespo
 import type {TreeNode} from 'primevue/treenode';
 import {testJsonrpc} from '@/utils/test-jsonrpc';
 import {stringIsEmpty} from '@/utils/string-is-empty';
+import {actionTwo} from '@/utils/show-driver';
+import delay from '@/utils/delay';
 
 const route = useRoute();
 const router = useRouter();
@@ -51,6 +53,15 @@ const downloadType = ref<{
 const progress = ref(0);
 const results: ParsedFile[] = [];
 
+const onNextStep = async (element: Element | undefined) => {
+	if (element && element.id === 'driver-step-select-download-type') {
+		downloadType.value.code = 'jsonrpc';
+	} else {
+		downloadType.value.code = '';
+	}
+	await delay(120);
+};
+
 onMounted(async () => {
 	try {
 		const {data: response} = await getFileList(requestId, undefined);
@@ -61,6 +72,9 @@ onMounted(async () => {
 		diskRoot.value = root;
 		filesRef.value = tree;
 		blocked.value = false;
+		if (window.localStorage.getItem('driver-step-done') !== 'true') {
+			actionTwo(onNextStep);
+		}
 	} catch (e) {
 		console.error(e);
 		message.error('数据出错！请重新解析！');
@@ -186,7 +200,7 @@ worker.setCallback(onWorkerMessage);
 	<div class="layout-main-container">
 		<div class="layout-main">
 			<div class="grid">
-				<div class="col-12 lg:col-8 xl:col-8">
+				<div class="col-12 lg:col-8 xl:col-8" id="driver-step-file-list">
 					<Fieldset legend="文件列表">
 						<BlockUI :blocked="blocked">
 							<ProgressBar v-if="blocked || treeLoading" mode="indeterminate"
@@ -199,7 +213,7 @@ worker.setCallback(onWorkerMessage);
 					</Fieldset>
 				</div>
 				<div class="col-12 lg:col-4 xl:col-4">
-					<Fieldset legend="文件信息">
+					<Fieldset legend="文件信息" id="driver-step-file-count">
 						<ul class="list-none p-0 m-0">
 							<li class="flex flex-row align-items-center justify-content-between">
 								<div>
@@ -221,7 +235,7 @@ worker.setCallback(onWorkerMessage);
 							</li>
 						</ul>
 					</Fieldset>
-					<Fieldset legend="下载配置" class="mt-4 mb-4 p-fluid" toggleable :disabled="blocked">
+					<Fieldset legend="下载配置" class="mt-4 mb-4 p-fluid" toggleable :disabled="blocked" id="driver-step-select-download-type">
 						<div class="formgrid grid">
 							<div class="field col">
 								<label for="type">下载方式</label>
@@ -261,7 +275,7 @@ worker.setCallback(onWorkerMessage);
 									<InputText type="text" v-model="rpcRef.token"/>
 								</div>
 								<div class="field col">
-									<Button label="检测连通性" style="margin-top: 25px;"
+									<Button label="检测连通性" style="margin-top: 25px;" id="driver-step-test-json-rpc"
 									        @click="testConnectionRPC"></Button>
 								</div>
 							</div>
@@ -272,7 +286,7 @@ worker.setCallback(onWorkerMessage);
 						             :value="progress"></ProgressBar>
 						<Divider/>
 						<ButtonGroup>
-							<Button label="开始" icon="pi pi-check" :disabled="selectedFiles.length === 0"
+							<Button label="开始" icon="pi pi-check" :disabled="selectedFiles.length === 0" id="driver-step-done"
 							        @click="start"/>
 							<Button label="取消" icon="pi pi-times" :disabled="!starting" @click="stop"/>
 						</ButtonGroup>

@@ -10,6 +10,7 @@ import type {MenuItem} from 'primevue/menuitem';
 import {parseBaiduShareUrl} from '@/utils/parse-baidu-share-url';
 import {getRequestId} from '@/services/parse';
 import {useRouter} from 'vue-router';
+import {actionOne} from '@/utils/show-driver';
 
 const router = useRouter();
 const cacheStore = useCacheStore();
@@ -37,6 +38,14 @@ const items = ref<MenuItem[]>([
 				icon: 'pi pi-cloud',
 				command: () => {
 					cacheStore.adminLogin = !cacheStore.adminLogin;
+				}
+			},
+			{
+				label: '新手教程',
+				icon: 'pi',
+				command: () => {
+					window.localStorage.removeItem('driver-step-done');
+					actionOne();
 				}
 			}
 		]
@@ -96,20 +105,21 @@ watch(url, value => {
 				</template>
 				<template #icons>
 					<Menu ref="menu" id="overlay_menu" :model="items" :popup="true"/>
-					<button class="p-panel-header-icon p-link mr-2" @click="toggle" :disabled="loading">
+					<button class="p-panel-header-icon p-link mr-2" @click="toggle" :disabled="loading"
+					        id="driver-step-menu">
 						<span class="pi pi-cog"></span>
 					</button>
 				</template>
 				<div class="p-fluid">
-					<div class="field">
+					<div class="field" id="driver-step-pan-url-input">
 						<label for="disk-url">网盘链接</label>
 						<InputText type="text" v-model="url"/>
 					</div>
-					<div class="field">
+					<div class="field" id="driver-step-pan-pwd-input">
 						<label for="disk-password">网盘密码</label>
 						<InputText type="text" v-model="pwd"/>
 					</div>
-					<Button @click="doParser" label="提交"/>
+					<Button @click="doParser" label="提交" id="driver-step-action-parse"/>
 				</div>
 			</Panel>
 		</div>
