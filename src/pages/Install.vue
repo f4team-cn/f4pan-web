@@ -74,7 +74,7 @@ const systemConfig = reactive<InstallSystemConfig>({
 	fixed_key: '',
 	key_last_time: '300',
 	normal_cookie: '',
-	parse_ua: 'netdisk',
+	parse_ua: 'netdisk;',
 	real_url_last_time: '1800',
 	requires_key: 'dynamic'
 });

@@ -137,6 +137,7 @@ const stop = () => {
 	blocked.value = false;
 	starting.value = false;
 	dialogStore.interceptUnload = false;
+	progress.value = 0;
 };
 
 const onWorkerMessage = async (m: WorkerResponse) => {
@@ -152,9 +153,9 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 		return;
 	}
 	if (m.type === 'progress') {
-		const low = (m.max ? m.max : 1) - (m.n ? m.n : 0) + 1;
-		const single = 100 / low;
-		progress.value = Math.floor(single);
+		const max = m.max || 1;
+		const n = m.n || 0
+		progress.value = Math.round(n / max * 100);
 		return;
 	}
 	if (m.type === 'success') {
@@ -282,7 +283,7 @@ worker.setCallback(onWorkerMessage);
 						</template>
 					</Fieldset>
 					<Fieldset legend="准备下载">
-						<ProgressBar :mode="!starting ? 'indeterminate' : 'determinate'"
+						<ProgressBar :mode="starting && progress === 0 ? 'indeterminate' : 'determinate'" v-if="starting"
 						             :value="progress"></ProgressBar>
 						<Divider/>
 						<ButtonGroup>
