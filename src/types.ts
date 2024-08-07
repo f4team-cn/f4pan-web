@@ -30,6 +30,7 @@ export type RPCConfig = {
 	host: string;
 	port: string;
 	token: string;
+	basedir: string;
 };
 
 export type FileListResult = {
@@ -59,6 +60,7 @@ export type ParsedFileResult = {
 	dlink: string;
 	ua: string;
 	use_cache: boolean;
+	filefsid: string;
 };
 
 export type Notice = {

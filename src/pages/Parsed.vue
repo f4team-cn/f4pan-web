@@ -8,7 +8,7 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Divider from 'primevue/divider';
 import ButtonGroup from 'primevue/buttongroup';
-import {onBeforeUnmount, onMounted, ref} from 'vue';
+import {nextTick, onBeforeUnmount, onMounted, ref} from 'vue';
 import {storeToRefs} from 'pinia';
 import {useCacheStore, useUserStore} from '@/store';
 import {useMessage} from '@/hooks/useMessage';
@@ -25,6 +25,7 @@ import {testJsonrpc} from '@/utils/test-jsonrpc';
 import {stringIsEmpty} from '@/utils/string-is-empty';
 import {actionTwo} from '@/utils/show-driver';
 import delay from '@/utils/delay';
+import {getJsonRpcConfig} from '@/utils/get-jsonrpc-config';
 
 const route = useRoute();
 const router = useRouter();
@@ -36,8 +37,8 @@ const filesRef = ref<TreeFileInfo[] | undefined>(undefined);
 const diskRoot = ref<string | undefined>(undefined);
 const message = useMessage();
 const treeLoading = ref(false);
-const selectedFilesOrigin = ref([]);
-const selectedFiles = ref<TreeFileInfo[]>([]);
+const selectedFilesOrigin = ref<Record<string | number, any>>({});
+const selectedFiles = ref<(TreeFileInfo & TreeNode)[]>([]);
 const starting = ref(false);
 const shareInfo = ref<ShareInfo>({seckey: '', share_id: '', uk: ''});
 const worker = useWorker();
@@ -50,6 +51,7 @@ const downloadType = ref<{
 }>({
 	code: ''
 });
+const rndDir = ref('');
 const progress = ref(0);
 const results: ParsedFile[] = [];
 
@@ -67,6 +69,7 @@ onMounted(async () => {
 		const {data: response} = await getFileList(requestId, undefined);
 		const {data} = response;
 		const files = data.list;
+		rndDir.value = files[0].filename;
 		const {root, tree} = dealFileList(files);
 		shareInfo.value = data.shareinfo;
 		diskRoot.value = root;
@@ -97,22 +100,52 @@ const onNodeExpand = async (node: TreeNode) => {
 		node.loading = false;
 	}
 };
-// 过滤选择文件夹 （只选择文件）
-const onNodeSelect = (node: TreeNode & TreeFileInfo) => {
-	if (!node.leaf) return;
 
-	const found = selectedFiles.value.find(v => v.fs_id === node.fs_id);
-	if (!found) {
-		selectedFiles.value.push(node);
+const selectFile = (node: TreeNode & TreeFileInfo) => {
+	if (!node.leaf && node.children === undefined) {
+		nextTick(() => {
+			delete selectedFilesOrigin.value[node.key];
+		});
+		return;
+	}
+	if (node.children && !node.leaf) {
+		node.children.forEach((child => selectFile(child as typeof node)));
+	} else {
+		const found = selectedFiles.value.find(v => v.fs_id === node.fs_id);
+		if (!found) {
+			selectedFiles.value.push(node);
+		}
 	}
 };
-const onNodeUnSelect = (node: TreeNode) => {
-	if (!node.leaf) return;
 
-	const found = selectedFiles.value.findIndex(v => v.fs_id === node.fs_id);
-	if (found !== -1) {
-		selectedFiles.value.splice(found, 1);
+const unSelectFile = (node: TreeNode & TreeFileInfo) => {
+	if (node.children) {
+		node.children.forEach((child => unSelectFile(child as typeof node)));
+	} else {
+		const found = selectedFiles.value.findIndex(v => v.fs_id === node.fs_id);
+		if (found !== -1) {
+			selectedFiles.value.splice(found, 1);
+		}
 	}
+};
+
+const onNodeSelect = (node: TreeNode & TreeFileInfo) => {
+	if (!node.leaf && node.children === undefined) {
+		message.warn('请先加载该文件夹下的所有文件！');
+		nextTick(() => {
+			delete selectedFilesOrigin.value[node.key];
+		});
+		return;
+	}
+	selectFile(node);
+};
+
+const onNodeUnSelect = (node: TreeNode & TreeFileInfo) => {
+	if (!node.leaf) {
+		node?.children?.forEach(child => unSelectFile(child as typeof node));
+		return;
+	}
+	unSelectFile(node);
 };
 
 const dialogStore = useCacheStore();
@@ -127,9 +160,18 @@ const start = () => {
 	starting.value = true;
 	dialogStore.interceptUnload = true;
 	const body: WorkerRequestBody[] = [];
-	for (let file of selectedFiles.value) {
-		body.push({fs_id: file.fs_id, reqId: requestId, surl, pwd, ...shareInfo.value});
-	}
+	const add = (file: TreeFileInfo & TreeNode) => {
+		if (file.children) {
+			file.children.forEach(child => {
+				add(child as typeof file);
+			});
+		} else {
+			body.push({fs_id: file.fs_id, reqId: requestId, surl, pwd, ...shareInfo.value});
+		}
+	};
+	selectedFiles.value.forEach(file => {
+		add(file);
+	});
 	worker.addTask(body);
 };
 
@@ -154,13 +196,19 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 	}
 	if (m.type === 'progress') {
 		const max = m.max || 1;
-		const n = m.n || 0
+		const n = m.n || 0;
 		progress.value = Math.round(n / max * 100);
 		return;
 	}
 	if (m.type === 'success') {
 		if (downloadType.value.code === 'jsonrpc') {
-			sendToRPC(m!!.body!!.dlink, m!!.body!!.filename);
+			const file = selectedFiles.value.find(f => f.fs_id === m!!.body!!.filefsid);
+			if (file === undefined) {
+				message.warn(`${m!!.body!!.filename} 下载失败，请刷新页面后重试！`);
+				return;
+			}
+			const rootDir = file.path.replace(new RegExp(`/${rndDir.value}.*`, 'g'), '');
+			sendToRPC(m!!.body!!.dlink, m!!.body!!.filename, file.path.replace(new RegExp(`^${rootDir}`), '').replace(m!!.body!!.filename, ''));
 			return;
 		}
 		// Web
@@ -180,6 +228,17 @@ const testConnectionRPC = () => {
 			message.success('连接成功！');
 		} else {
 			message.warn('连接失败！');
+		}
+	});
+};
+
+const getRPConfig = async () => {
+	getJsonRpcConfig().then(rpcConfig => {
+		if (rpcConfig.dir) {
+			rpcRef.value.basedir = rpcConfig.dir;
+			message.success('获取成功！');
+		} else {
+			message.warn('获取失败！');
 		}
 	});
 };
@@ -206,7 +265,7 @@ worker.setCallback(onWorkerMessage);
 						<BlockUI :blocked="blocked">
 							<ProgressBar v-if="blocked || treeLoading" mode="indeterminate"
 							             style="height: 6px"></ProgressBar>
-							<Tree class="mt-4" loadingMode="icon" :value="filesRef" selection-mode="multiple"
+							<Tree class="mt-4" loadingMode="icon" :value="filesRef" selection-mode="checkbox"
 							      @node-expand="onNodeExpand" :loading="treeLoading" @nodeSelect="onNodeSelect"
 							      @nodeUnselect="onNodeUnSelect"
 							      v-model:selectionKeys="selectedFilesOrigin"/>
@@ -236,7 +295,8 @@ worker.setCallback(onWorkerMessage);
 							</li>
 						</ul>
 					</Fieldset>
-					<Fieldset legend="下载配置" class="mt-4 mb-4 p-fluid" toggleable :disabled="blocked" id="driver-step-select-download-type">
+					<Fieldset legend="下载配置" class="mt-4 mb-4 p-fluid" toggleable :disabled="blocked"
+					          id="driver-step-select-download-type">
 						<div class="formgrid grid">
 							<div class="field col">
 								<label for="type">下载方式</label>
@@ -280,14 +340,34 @@ worker.setCallback(onWorkerMessage);
 									        @click="testConnectionRPC"></Button>
 								</div>
 							</div>
+							<div class="formgrid grid">
+								<div class="field col">
+									<label for="basedir">下载目录(最好不要留空)</label>
+									<InputText type="text" placeholder="" v-model="rpcRef.basedir"/>
+								</div>
+								<div class="field col">
+									<Button label="获取配置" style="margin-top: 25px;" id="driver-step-test-json-rpc"
+									        @click="getRPConfig"></Button>
+								</div>
+							</div>
+							<Divider></Divider>
+							<p>下载目录为在操作系统中目录，而不是网盘目录，如果留空可能会现在在操作系统的根目录，如果不知道当前配置的下载目录，可以点击【获取配置】来自动获取。<br>
+								<strong>例如：</strong><br>
+								下载目录是：D:/下载<br>
+								选择的文件夹是：/视频/a.mp4<br>
+								那么下载地址是：D:/下载/视频/a.mp4<br>
+								<strong>保存的文件夹和您分享出的文件的根目录有关，和您网盘的存储路径无关。</strong>
+							</p>
 						</template>
 					</Fieldset>
 					<Fieldset legend="准备下载">
-						<ProgressBar :mode="starting && progress === 0 ? 'indeterminate' : 'determinate'" v-if="starting"
+						<ProgressBar :mode="starting && progress === 0 ? 'indeterminate' : 'determinate'"
+						             v-if="starting"
 						             :value="progress"></ProgressBar>
 						<Divider/>
 						<ButtonGroup>
-							<Button label="开始" icon="pi pi-check" :disabled="selectedFiles.length === 0" id="driver-step-done"
+							<Button label="开始" icon="pi pi-check" :disabled="selectedFiles.length === 0"
+							        id="driver-step-done"
 							        @click="start"/>
 							<Button label="取消" icon="pi pi-times" :disabled="!starting" @click="stop"/>
 						</ButtonGroup>

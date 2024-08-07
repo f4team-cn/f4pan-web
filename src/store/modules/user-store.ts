@@ -18,7 +18,8 @@ export const useUserStore = defineStore('user-store', {
 			rpc: {
 				host: 'localhost',
 				port: '6800',
-				token: ''
+				token: '',
+				basedir: ''
 			}
 		};
 	},
