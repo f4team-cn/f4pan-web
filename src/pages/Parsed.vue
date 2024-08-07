@@ -202,7 +202,7 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 	}
 	if (m.type === 'success') {
 		if (downloadType.value.code === 'jsonrpc') {
-			const file = selectedFiles.value.find(f => f.fs_id === m!!.body!!.filefsid);
+			const file = selectedFiles.value.find(f => String(f.fs_id) === String(m!!.body!!.filefsid));
 			if (file === undefined) {
 				message.warn(`${m!!.body!!.filename} 下载失败，请刷新页面后重试！`);
 				return;

@@ -17,7 +17,7 @@ export function dealFileList(files: File[]) {
 			size: file.size,
 			icon: `pi ${dir ? 'pi-folder' : 'pi-file'}`,
 			fs_id: file.fs_id,
-		}
+		};
 	});
 	return {
 		tree,
