@@ -207,7 +207,7 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 				message.warn(`${m!!.body!!.filename} 下载失败，请刷新页面后重试！`);
 				return;
 			}
-			const rootDir = file.path.replace(new RegExp(`/${rndDir.value}.*`, 'g'), '');
+			const rootDir = file.path.replace(new RegExp(`/${rndDir.value.replace(/[\[\]]/g, '\\$&')}.*`, 'g'), '');
 			sendToRPC(m!!.body!!.dlink, m!!.body!!.filename, file.path.replace(new RegExp(`^${rootDir}`), '').replace(m!!.body!!.filename, ''));
 			return;
 		}
