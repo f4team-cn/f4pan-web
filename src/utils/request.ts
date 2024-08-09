@@ -9,7 +9,7 @@ interface CustomRequestOptions {
 }
 
 const config: CreateAxiosDefaults = {
-	timeout: 1000 * 10,
+	timeout: 1000 * 20,
 	baseURL: import.meta.env.VITE_API_URL,
 	headers: {
 		'Content-Type': 'application/x-www-form-urlencoded'
