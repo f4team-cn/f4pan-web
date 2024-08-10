@@ -89,7 +89,7 @@ chown -R www-data.www-data   /data/container/f4pan/nginx/nginx-data
 
 
 
-#### #安装城后后打开http://服务器地址:6602/#/install  根据引导安装。
+#### #安装完成后打开http://服务器地址:6602/#/install  根据引导安装。
 
 #### #数据库host：mysql    port：3306   数据库的用户名：f4pan  数据库密码：123456   数据库库名：f4pan  
 
