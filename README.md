@@ -26,6 +26,16 @@ docker-compose  up -d
 
 
 
+
+
+
+
+
+
+
+
+
+
 #此处composer  install 需要手动执行。技术有限，写进docker-compose里面容器就会无线重启。
 #启动后执行下面命令
 
@@ -36,8 +46,15 @@ docker exec -it php8.2  composer  install
 
 
 
+
+
+
+
+
 #此处懒得再修改镜像了，直接手动执行
 #安装完think后更改nginx映射路径的权限
+
+
 
 chown -R www-data.www-data   /data/container/f4pan/nginx/nginx-data
 
