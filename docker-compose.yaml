@@ -1,0 +1,101 @@
+services:
+  aria2c:
+    image: p3terx/aria2-pro:latest
+    container_name: aria2c
+    restart: unless-stopped
+    ports:
+      - 0.0.0.0:16600:6800
+    volumes:
+      - ./f4pan/aria2c/conf/:/config
+      - ./f4pan/aria2c/down:/downloads
+    environment:
+      - TZ=Asia/Shanghai
+      - RPC_SECRET=12345678
+    networks:
+      - f4pan
+
+# mysql
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    restart: unless-stopped
+    expose:
+      - 3306
+    volumes:
+      - ./f4pan/mysql/mysql-data:/var/lib/mysql
+    environment:
+      - TZ=Asia/Shanghai
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_DATABASE=f4pan
+      - MYSQL_USER=f4pan
+      - MYSQL_PASSWORD=123456
+    command:
+      - "--character-set-server=utf8"
+    networks:
+      - f4pan
+
+# redis
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+    expose:
+      - 6379
+    volumes:
+      - ./f4pan/redis/redis-conf:/etc/redis
+      - ./f4pan/redis/redis-data:/var/lib/redis
+    command: /usr/local/bin/redis-server /etc/redis/redis.conf
+    networks:
+      - f4pan
+
+# php8.2
+  php8.2:
+    build: ./f4pan/php/docker-file
+    image: php-fpm8.2/ext:v3
+    restart: unless-stopped
+    container_name: php8.2
+    expose:
+      - 9000
+    volumes:
+      - ./f4pan/nginx/nginx-data/html/f4pan:/etc/nginx/html/f4pan
+#    command: composer install
+    links:
+      - mysql:mysql
+      - redis:redis
+    depends_on:
+       - mysql
+       - redis
+    networks:
+      - f4pan
+
+# nginx
+  nginx:
+    build:  ./f4pan/nginx/docker-file
+    image: nginx:v1
+    container_name: nginx
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+    ports: 
+      - 0.0.0.0:6602:6502
+      - 0.0.0.0:6601:6801
+    volumes:
+      - ./f4pan/nginx/nginx-data/html:/etc/nginx/html
+      - ./f4pan/nginx/nginx-data/fastcgi.conf:/etc/nginx/fastcgi.conf
+      - ./f4pan/nginx/nginx-data/nginx.conf:/etc/nginx/nginx.conf
+      - ./f4pan/nginx/nginx-data/conf.d/f4pan.conf:/etc/nginx/conf.d/f4pan.conf
+      - ./f4pan/nginx/nginx-data/logs:/etc/nginx/logs
+    links:
+      - php8.2:php8.2
+      - redis:redis
+    depends_on:
+      - php8.2
+      - aria2c
+    networks:
+      - f4pan
+
+networks:
+  f4pan:
+    driver: bridge

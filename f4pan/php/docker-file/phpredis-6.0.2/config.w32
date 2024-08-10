@@ -1,0 +1,27 @@
+// vim: ft=javascript:
+
+ARG_ENABLE("redis", "whether to enable redis support", "no");
+ARG_ENABLE("redis-session", "whether to enable sessions", "yes");
+ARG_ENABLE("redis-igbinary", "whether to enable igbinary serializer support", "no");
+
+if (PHP_REDIS != "no") {
+	var sources = "redis.c redis_commands.c library.c redis_session.c redis_array.c redis_array_impl.c redis_cluster.c cluster_library.c redis_sentinel.c sentinel_library.c backoff.c";
+	if (PHP_REDIS_SESSION != "no") {
+		ADD_EXTENSION_DEP("redis", "session");
+		ADD_FLAG("CFLAGS_REDIS", ' /D PHP_SESSION=1 ');
+		AC_DEFINE("HAVE_REDIS_SESSION", 1);
+	}
+
+	if (PHP_REDIS_IGBINARY != "no") {
+		if (CHECK_HEADER_ADD_INCLUDE("igbinary.h", "CFLAGS_REDIS", configure_module_dirname + "\\..\\igbinary")) {
+
+			ADD_EXTENSION_DEP("redis", "igbinary");
+			AC_DEFINE("HAVE_REDIS_IGBINARY", 1);
+		} else {
+			WARNING("redis igbinary support not enabled");
+		}
+	}
+	EXTENSION("redis", sources);
+
+}
+

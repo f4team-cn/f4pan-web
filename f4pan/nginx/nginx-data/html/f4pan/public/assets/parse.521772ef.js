@@ -1,0 +1,1 @@
+import{M as t}from"./index.11a12647.js";function a(r,e){return t({method:"GET",url:"/v1/parse/get_file_list",params:{req_id:r,isroot:e===void 0?1:0,dir:e}})}function o(r,e,s){return t({method:"GET",url:"/public/use_parse_key",params:{surl:r,pwd:e,parse_key:s}})}export{a,o as g};
