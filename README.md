@@ -1,13 +1,14 @@
-f4pan项目打包的docker镜像，同是将aria2下载器一块打包。
+基于f4pan项目打包的docker镜像，同时将aria2下载器一块打包。
+感谢大佬的源码。f4pan项目地址：https://github.com/f4team-cn/f4pan
 
 
-所需的5个镜像全是在docker仓库中拉取的，其中php8.2-fpm、nginx两个镜像二次构建，构建过程扽别在php/docker-file/Dockerfile、nginx/docker-file/Dockerfile文件中
+所需的5个镜像全是在docker仓库中拉取的，其中php8.2-fpm、nginx两个镜像二次构建，构建过程分别在php/docker-file/Dockerfile、nginx/docker-file/Dockerfile文件中
 
 
 
 
 
-此项目只在arm64的Ubuntu20.04上面测试过，其他设备需要自行测试。x86架构的机器需要将镜像替换为x86的镜像。
+此项目只在arm64的Ubuntu20.04(没错，就是小米5s。感谢b站的umeko大佬，让我的破手机还能继续发光发热。)测试过，其他设备需要自行测试。 x86架构的机器需要将镜像替换为x86的镜像。
 
 
 
