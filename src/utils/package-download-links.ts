@@ -46,3 +46,33 @@ export async function packageDownloadLinks(results: ParsedFile[], format: string
 	}
 	return false;
 }
+
+/**
+ * IDM格式打包下载
+ * @param results
+ */
+export async function package2IDMLinks(results: ParsedFile[]) {
+	const zip = new JSZip();
+	const message = useMessage();
+	zip.file('说明.txt', getREADME());
+	const content = results.map(v => {
+		return `<\r\n${v.link}\r\nUser-Agent: netdisk;f4pan\r\n>`;
+	}).join('\r\n');
+	zip.file('任务.ef2', content+ '\r\n');
+	try {
+		const blob = await zip.generateAsync({
+			type: 'blob',
+			compression: 'DEFLATE',
+			compressionOptions: {
+				level: 9,
+			}
+		});
+		FileSaver.saveAs(blob, 'F4Pan-' + Date.now() + '.zip');
+		message.success('打包成功！正在下载……');
+		return true;
+	} catch (e) {
+		console.error(e);
+		message.error('打包失败，请重新尝试或使用 JSON RPC 下载。');
+	}
+	return false;
+}
