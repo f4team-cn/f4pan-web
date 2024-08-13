@@ -16,7 +16,7 @@ import {useRoute, useRouter} from 'vue-router';
 import {useWorker} from '@/hooks/useWorker';
 import {renderSize} from '@/utils/render-size';
 import {sendToRPC} from '@/utils/send-to-rpc';
-import {packageDownloadLinks} from '@/utils/package-download-links';
+import { package2IDMLinks, packageDownloadLinks } from '@/utils/package-download-links';
 import {getFileList} from '@/services/parse';
 import {dealFileList} from '@/utils/deal-file-list';
 import type {ParsedFile, ShareInfo, TreeFileInfo, WorkerRequestBody, WorkerResponse} from '@/types';
@@ -47,7 +47,7 @@ const userRef = storeToRefs(userStore);
 const rpcRef = userRef.rpc;
 const exportFormat = userRef.exportFormat;
 const downloadType = ref<{
-	code: 'web' | 'jsonrpc' | ''
+	code: 'web' | 'jsonrpc' | 'idm' |''
 }>({
 	code: ''
 });
@@ -190,7 +190,12 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 			await packageDownloadLinks(results, userRef.exportFormat.value);
 			stop();
 			return;
+		} else if (downloadType.value.code === 'idm') {
+			await package2IDMLinks(results);
+			stop();
+			return;
 		}
+
 		stop();
 		return;
 	}
@@ -214,7 +219,8 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 		// Web
 		results.push({
 			filename: m!!.body!!.filename,
-			link: m!!.body!!.dlink
+			link: m!!.body!!.dlink,
+			ua: m!!.body!!.ua
 		});
 	}
 	if (m.type === 'error') {
@@ -301,7 +307,7 @@ worker.setCallback(onWorkerMessage);
 							<div class="field col">
 								<label for="type">下载方式</label>
 								<Dropdown v-model="downloadType" :disabled="blocked"
-								          :options="[{name: 'Web', code: 'web'}, {name: 'JSON RPC', code: 'jsonrpc'}]"
+								          :options="[{name: 'Web', code: 'web'}, {name: 'JSON RPC', code: 'jsonrpc'},{name: 'IDM 下载', code: 'idm'}]"
 								          optionLabel="name" placeholder="选择下载方式"/>
 							</div>
 						</div>
@@ -357,6 +363,16 @@ worker.setCallback(onWorkerMessage);
 								选择的文件夹是：/视频/a.mp4<br>
 								那么下载地址是：D:/下载/视频/a.mp4<br>
 								<strong>保存的文件夹和您分享出的文件的根目录有关，和您网盘的存储路径无关。</strong>
+							</p>
+						</template>
+						<template v-if="downloadType.code === 'idm'">
+							<Divider align="left" type="solid">
+								<b>IDM 下载导入说明</b>
+							</Divider>
+							<Divider></Divider>
+							<p>压缩包内会生成一个 ef2 格式的文件，仅可在<strong>电脑版IDM</strong>中使用。<br>
+								打开IDM，点击右上角<strong>任务</strong>——<strong>导入</strong>——<strong>从"IDM导出文件"导入</strong><br>
+								此功能会自动帮你设置UA，无需在IDM设置中更改。<br>
 							</p>
 						</template>
 					</Fieldset>
