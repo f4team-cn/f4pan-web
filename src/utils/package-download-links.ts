@@ -55,8 +55,9 @@ export async function package2IDMLinks(results: ParsedFile[]) {
 	const zip = new JSZip();
 	const message = useMessage();
 	zip.file('说明.txt', getREADME());
+	// https://github.com/MotooriKashin/ef2 第三方的ef2工具支持指定文件名，官方的不支持，但是不会影响读取。
 	const content = results.map(v => {
-		return `<\r\n${v.link}\r\nUser-Agent: ${v.ua}\r\n>`;
+		return `<\r\n${v.link}\r\nUser-Agent: ${v.ua}\r\nfilename: ${v.filename}\r\n>`;
 	}).join('\r\n');
 	zip.file('任务.ef2', content + '\r\n');
 	try {
