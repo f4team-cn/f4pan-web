@@ -219,7 +219,8 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 		// Web
 		results.push({
 			filename: m!!.body!!.filename,
-			link: m!!.body!!.dlink
+			link: m!!.body!!.dlink,
+			ua: m!!.body!!.ua
 		});
 	}
 	if (m.type === 'error') {

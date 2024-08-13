@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
-import {useMessage} from '@/hooks/useMessage';
+import { useMessage } from '@/hooks/useMessage';
 import FileSaver from 'file-saver';
-import type {ParsedFile} from '@/types';
+import type { ParsedFile } from '@/types';
 import { useSystemConfigStore } from '@/store';
 
 function getREADME() {
@@ -34,7 +34,7 @@ export async function packageDownloadLinks(results: ParsedFile[], format: string
 			type: 'blob',
 			compression: 'DEFLATE',
 			compressionOptions: {
-				level: 9,
+				level: 9
 			}
 		});
 		FileSaver.saveAs(blob, 'F4Pan-' + Date.now() + '.zip');
@@ -56,15 +56,15 @@ export async function package2IDMLinks(results: ParsedFile[]) {
 	const message = useMessage();
 	zip.file('说明.txt', getREADME());
 	const content = results.map(v => {
-		return `<\r\n${v.link}\r\nUser-Agent: netdisk;f4pan\r\n>`;
+		return `<\r\n${v.link}\r\nUser-Agent: ${v.ua}\r\n>`;
 	}).join('\r\n');
-	zip.file('任务.ef2', content+ '\r\n');
+	zip.file('任务.ef2', content + '\r\n');
 	try {
 		const blob = await zip.generateAsync({
 			type: 'blob',
 			compression: 'DEFLATE',
 			compressionOptions: {
-				level: 9,
+				level: 9
 			}
 		});
 		FileSaver.saveAs(blob, 'F4Pan-' + Date.now() + '.zip');
