@@ -5,7 +5,7 @@
 # F4Pan 前端
 
 后端： [https://github.com/f4team-cn/f4pan](https://github.com/f4team-cn/f4pan)
-本仓库与后端仓库之前任意条款，开源协议通用！
+本仓库与后端仓库之间所有条款、开源协议通用！
 
 ## Modify Environment
 
