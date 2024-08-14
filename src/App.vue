@@ -55,8 +55,8 @@ watch(visible, (val) => {
 		<ConfirmPopup></ConfirmPopup>
 		<AdminLoginDialog />
 		<ParseVerifyDialog />
-		<Dialog v-model:visible="visible" modal maximizable :header="systemConfigRef.notice.value.title" :style="{ width: '50rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
-			<p class="mb-5" v-html="systemConfigRef.notice.value.content"></p>
+		<Dialog v-model:visible="visible" modal maximizable :header="systemConfigRef.notice.value?.title" :style="{ width: '50rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
+			<p class="mb-5" v-html="systemConfigRef.notice.value?.content"></p>
 		</Dialog>
 		<GithubCorners />
 		<router-view/>

@@ -36,7 +36,9 @@ export const useSystemConfigStore = defineStore('system-config-store', {
 			// 公告
 			if (this.notice_id > 0) {
 				const {data} = await getNotice(this.notice_id);
-				this.notice = data.data;
+				if (data.data) {
+					this.notice = data.data;
+				}
 			}
 			this.isInit = true;
 		}
