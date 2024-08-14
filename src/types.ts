@@ -51,7 +51,6 @@ export type TreeFileInfo = {
 export type ParsedFile = {
 	filename: string;
 	link: string;
-	ua: string;
 };
 
 export type ParsedFileResult = {

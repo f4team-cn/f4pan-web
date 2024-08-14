@@ -16,7 +16,7 @@ import {useRoute, useRouter} from 'vue-router';
 import {useWorker} from '@/hooks/useWorker';
 import {renderSize} from '@/utils/render-size';
 import {sendToRPC} from '@/utils/send-to-rpc';
-import { package2IDMLinks, packageDownloadLinks } from '@/utils/package-download-links';
+import { package2Aria2Input, package2IDMLinks, packageDownloadLinks } from '@/utils/package-download-links';
 import {getFileList} from '@/services/parse';
 import {dealFileList} from '@/utils/deal-file-list';
 import type {ParsedFile, ShareInfo, TreeFileInfo, WorkerRequestBody, WorkerResponse} from '@/types';
@@ -47,7 +47,7 @@ const userRef = storeToRefs(userStore);
 const rpcRef = userRef.rpc;
 const exportFormat = userRef.exportFormat;
 const downloadType = ref<{
-	code: 'web' | 'jsonrpc' | 'idm' |''
+	code: 'web' | 'jsonrpc' | 'idm' | 'aria2input' |''
 }>({
 	code: ''
 });
@@ -185,6 +185,10 @@ const stop = () => {
 const onWorkerMessage = async (m: WorkerResponse) => {
 	if (m.type === 'done') {
 		stop();
+		if (results.length === 0) {
+			message.warn('全部任务失败，请重新获取！');
+			return;
+		}
 		message.success('全部任务已完成！');
 		if (downloadType.value.code === 'web') {
 			await packageDownloadLinks(results, userRef.exportFormat.value);
@@ -192,6 +196,10 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 			return;
 		} else if (downloadType.value.code === 'idm') {
 			await package2IDMLinks(results);
+			stop();
+			return;
+		} else if (downloadType.value.code === 'aria2input') {
+			await package2Aria2Input(results);
 			stop();
 			return;
 		}
@@ -219,8 +227,7 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 		// Web
 		results.push({
 			filename: m!!.body!!.filename,
-			link: m!!.body!!.dlink,
-			ua: m!!.body!!.ua
+			link: m!!.body!!.dlink
 		});
 	}
 	if (m.type === 'error') {
@@ -307,7 +314,10 @@ worker.setCallback(onWorkerMessage);
 							<div class="field col">
 								<label for="type">下载方式</label>
 								<Dropdown v-model="downloadType" :disabled="blocked"
-								          :options="[{name: 'Web', code: 'web'}, {name: 'JSON RPC', code: 'jsonrpc'},{name: 'IDM 下载', code: 'idm'}]"
+								          :options="[{name: 'Web', code: 'web'},
+								          {name: 'Aria2 JSON RPC (推荐)', code: 'jsonrpc'},
+								          {name: 'IDM 下载', code: 'idm'},
+								          {name: 'Aria2 Input', code: 'aria2input'}]"
 								          optionLabel="name" placeholder="选择下载方式"/>
 							</div>
 						</div>
@@ -373,6 +383,15 @@ worker.setCallback(onWorkerMessage);
 							<p>压缩包内会生成一个 ef2 格式的文件，仅可在<strong>电脑版IDM</strong>中使用。<br>
 								打开IDM，点击右上角<strong>任务</strong>——<strong>导入</strong>——<strong>从"IDM导出文件"导入</strong><br>
 								此功能会自动帮你设置UA，无需在IDM设置中更改。<br>
+							</p>
+						</template>
+						<template v-if="downloadType.code === 'aria2input'">
+							<Divider align="left" type="solid">
+								<b>Aria2 Input方式</b>
+							</Divider>
+							<Divider></Divider>
+							<p><strong>非专业人士请使用Aria2 JSON RPC模式</strong><br>
+								使用 aria2 命令行输入文件开始下载. (aria2c -i task.txt)<br>
 							</p>
 						</template>
 					</Fieldset>
