@@ -54,10 +54,12 @@ export async function packageDownloadLinks(results: ParsedFile[], format: string
 export async function package2IDMLinks(results: ParsedFile[]) {
 	const zip = new JSZip();
 	const message = useMessage();
+	const systemConfig = useSystemConfigStore();
+	const UA = systemConfig.parse_ua
 	zip.file('说明.txt', getREADME());
 	// https://github.com/MotooriKashin/ef2 第三方的ef2工具支持指定文件名，官方的不支持，但是不会影响读取。
 	const content = results.map(v => {
-		return `<\r\n${v.link}\r\nUser-Agent: ${v.ua}\r\nfilename: ${v.filename}\r\n>`;
+		return `<\r\n${v.link}\r\nUser-Agent: ${UA}\r\nfilename: ${v.filename}\r\n>`;
 	}).join('\r\n');
 	zip.file('任务.ef2', content + '\r\n');
 	try {
@@ -74,6 +76,30 @@ export async function package2IDMLinks(results: ParsedFile[]) {
 	} catch (e) {
 		console.error(e);
 		message.error('打包失败，请重新尝试或使用 JSON RPC 下载。');
+	}
+	return false;
+}
+
+/**
+ * Aria2 Input格式打包下载
+ * @param results
+ */
+export async function package2Aria2Input(results: ParsedFile[]) {
+	const message = useMessage();
+	const README = getREADME().split('\n').map(line => '# ' + line).join('\n');
+	const systemConfig = useSystemConfigStore();
+	const UA = systemConfig.parse_ua
+	const content = README + '\r\n' + results.map(v => {
+		return `\r\n${v.link}\r\n  user-agent=${UA}\r\n  out=${v.filename}\r\n`;
+	}).join('\r\n');
+	try {
+		const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+		FileSaver.saveAs(blob, 'task.txt');
+		message.success('生成成功！正在下载……');
+		return true;
+	} catch (e) {
+		console.error(e);
+		message.error('生成失败，请重新尝试或使用 JSON RPC 下载。');
 	}
 	return false;
 }
