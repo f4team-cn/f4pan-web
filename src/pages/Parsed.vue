@@ -8,7 +8,7 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Divider from 'primevue/divider';
 import ButtonGroup from 'primevue/buttongroup';
-import {nextTick, onBeforeUnmount, onMounted, ref} from 'vue';
+import {nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue';
 import {storeToRefs} from 'pinia';
 import {useCacheStore, useUserStore} from '@/store';
 import {useMessage} from '@/hooks/useMessage';
@@ -53,6 +53,8 @@ const downloadType = ref<{
 });
 const rndDir = ref('');
 const progress = ref(0);
+const succeedTick = ref(0);
+const rpcInit = ref(false);
 const results: ParsedFile[] = [];
 
 const onNextStep = async (element: Element | undefined) => {
@@ -155,6 +157,7 @@ const start = () => {
 		return;
 	}
 	// 清除缓存
+	succeedTick.value = 0;
 	results.length = 0;
 	blocked.value = true;
 	starting.value = true;
@@ -180,13 +183,14 @@ const stop = () => {
 	starting.value = false;
 	dialogStore.interceptUnload = false;
 	progress.value = 0;
+	succeedTick.value = 0;
 };
 
 const onWorkerMessage = async (m: WorkerResponse) => {
 	if (m.type === 'done') {
-		stop();
-		if (results.length === 0) {
+		if (succeedTick.value === 0) {
 			message.warn('全部任务失败，请重新获取！');
+			stop();
 			return;
 		}
 		message.success('全部任务已完成！');
@@ -214,6 +218,7 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 		return;
 	}
 	if (m.type === 'success') {
+		succeedTick.value++;
 		if (downloadType.value.code === 'jsonrpc') {
 			const file = selectedFiles.value.find(f => String(f.fs_id) === String(m!!.body!!.filefsid));
 			if (file === undefined) {
@@ -236,24 +241,26 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 };
 
 const testConnectionRPC = () => {
+	rpcInit.value = true;
 	testJsonrpc(userStore.rpc.host, Number(userStore.rpc.port)).then(r => {
 		if (r) {
-			message.success('连接成功！');
+			message.success('测试 Aria2 连接成功！');
 		} else {
-			message.warn('连接失败！');
+			message.warn('测试 Aria2 连接失败！');
 		}
-	});
+	}).finally(() => rpcInit.value = false);
 };
 
 const getRPConfig = async () => {
+	rpcInit.value = true;
 	getJsonRpcConfig().then(rpcConfig => {
 		if (rpcConfig.dir) {
 			rpcRef.value.basedir = rpcConfig.dir;
-			message.success('获取成功！');
+			message.success('获取 Aria2 配置成功！');
 		} else {
-			message.warn('获取失败！');
+			message.warn('获取 Aria2 配置失败！');
 		}
-	});
+	}).finally(() => rpcInit.value = false);
 };
 
 onBeforeUnmount(() => {
@@ -262,6 +269,12 @@ onBeforeUnmount(() => {
 
 worker.setCallback(onWorkerMessage);
 
+watch(downloadType, value => {
+	// json rpc 自动获取下载目录
+	if (value.code === 'jsonrpc') {
+		getRPConfig();
+	}
+});
 </script>
 
 <template>
@@ -352,7 +365,7 @@ worker.setCallback(onWorkerMessage);
 									<InputText type="text" v-model="rpcRef.token"/>
 								</div>
 								<div class="field col">
-									<Button label="检测连通性" style="margin-top: 25px;" id="driver-step-test-json-rpc"
+									<Button label="检测连通性" style="margin-top: 25px;" id="driver-step-test-json-rpc" :loading="rpcInit"
 									        @click="testConnectionRPC"></Button>
 								</div>
 							</div>
@@ -362,7 +375,7 @@ worker.setCallback(onWorkerMessage);
 									<InputText type="text" placeholder="" v-model="rpcRef.basedir"/>
 								</div>
 								<div class="field col">
-									<Button label="获取配置" style="margin-top: 25px;" id="driver-step-test-json-rpc"
+									<Button label="获取配置" style="margin-top: 25px;" id="driver-step-test-json-rpc" :loading="rpcInit"
 									        @click="getRPConfig"></Button>
 								</div>
 							</div>
@@ -379,7 +392,6 @@ worker.setCallback(onWorkerMessage);
 							<Divider align="left" type="solid">
 								<b>IDM 下载导入说明</b>
 							</Divider>
-							<Divider></Divider>
 							<p>压缩包内会生成一个 ef2 格式的文件，仅可在<strong>电脑版IDM</strong>中使用。<br>
 								打开IDM，点击右上角<strong>任务</strong>——<strong>导入</strong>——<strong>从"IDM导出文件"导入</strong><br>
 								此功能会自动帮你设置UA，无需在IDM设置中更改。<br>
@@ -389,7 +401,6 @@ worker.setCallback(onWorkerMessage);
 							<Divider align="left" type="solid">
 								<b>Aria2 Input方式</b>
 							</Divider>
-							<Divider></Divider>
 							<p><strong>非专业人士请使用Aria2 JSON RPC模式</strong><br>
 								使用 aria2 命令行输入文件开始下载. (aria2c -i task.txt)<br>
 							</p>
