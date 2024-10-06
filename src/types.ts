@@ -49,6 +49,7 @@ export type TreeFileInfo = {
 };
 
 export type ParsedFile = {
+	id?: number;
 	filename: string;
 	link: string;
 };
@@ -90,6 +91,7 @@ export type SystemStatusResult = {
 	spent_svip_count: number;
 	last_updated: string;
 	total_parsing_traffic_format: string;
+	today_parsing_traffic_format: string;
 };
 
 export type VipAccount = {

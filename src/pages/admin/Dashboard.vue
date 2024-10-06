@@ -11,6 +11,7 @@ const spentVip = ref(0);
 const parsedTick = ref(0);
 const ipNum = ref(0);
 const requestNum = ref(0);
+const parsedTodayCount = ref('……');
 
 onMounted(() => {
 	// 延迟一会等待 toast 自动配置 z-index 后
@@ -19,6 +20,7 @@ onMounted(() => {
 		try {
 			const {data} = (await getSystemStatus()).data;
 			parsedAllCount.value = data.total_parsing_traffic_format;
+			parsedTodayCount.value = data.today_parsing_traffic_format;
 			spentVip.value = data.spent_svip_count;
 			parsedTick.value = data.total_parsing_count;
 			const {data: ip} = (await getStatisticIPCount()).data;
@@ -37,7 +39,21 @@ onMounted(() => {
 				<Panel>
 					<div class="flex justify-content-between mb-3">
 						<div>
-							<span class="block text-500 font-medium mb-3">解析量</span>
+							<span class="block text-500 font-medium mb-3">今日解析量</span>
+							<div class="text-900 font-medium text-xl">{{ parsedTodayCount }}</div>
+						</div>
+						<div class="flex align-items-center justify-content-center bg-pink-100 border-round"
+						     style="width: 2.5rem; height: 2.5rem">
+							<i class="pi pi-calendar-minus text-pink-500 text-xl"></i>
+						</div>
+					</div>
+				</Panel>
+			</div>
+			<div class="col-12 lg:col-6 xl:col-3">
+				<Panel>
+					<div class="flex justify-content-between mb-3">
+						<div>
+							<span class="block text-500 font-medium mb-3">总解析量</span>
 							<div class="text-900 font-medium text-xl">{{ parsedAllCount }}</div>
 						</div>
 						<div class="flex align-items-center justify-content-center bg-blue-100 border-round"

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+import Image from 'primevue/image';
+import Card from 'primevue/card';
 import Fieldset from 'primevue/fieldset';
 import BlockUI from 'primevue/blockui';
 import ProgressBar from 'primevue/progressbar';
@@ -8,15 +12,20 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Divider from 'primevue/divider';
 import ButtonGroup from 'primevue/buttongroup';
-import {nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue';
+import {nextTick, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue';
 import {storeToRefs} from 'pinia';
-import {useCacheStore, useUserStore} from '@/store';
+import {useCacheStore, useSystemConfigStore, useUserStore} from '@/store';
 import {useMessage} from '@/hooks/useMessage';
 import {useRoute, useRouter} from 'vue-router';
 import {useWorker} from '@/hooks/useWorker';
 import {renderSize} from '@/utils/render-size';
 import {sendToRPC} from '@/utils/send-to-rpc';
-import { package2Aria2Input, package2IDMLinks, packageDownloadLinks } from '@/utils/package-download-links';
+import {
+	package2Aria2Input,
+	package2IDMLinks,
+	package2JsonFile,
+	packageDownloadLinks
+} from '@/utils/package-download-links';
 import {getFileList} from '@/services/parse';
 import {dealFileList} from '@/utils/deal-file-list';
 import type {ParsedFile, ShareInfo, TreeFileInfo, WorkerRequestBody, WorkerResponse} from '@/types';
@@ -26,6 +35,10 @@ import {stringIsEmpty} from '@/utils/string-is-empty';
 import {actionTwo} from '@/utils/show-driver';
 import delay from '@/utils/delay';
 import {getJsonRpcConfig} from '@/utils/get-jsonrpc-config';
+import Message from 'primevue/message';
+import {addUri, waken} from '@/utils/motrix';
+import allowAlwaysOpenImage from '@/assets/allow-always-open.png';
+import copyToClipboard from 'copy-to-clipboard';
 
 const route = useRoute();
 const router = useRouter();
@@ -46,8 +59,9 @@ const userStore = useUserStore();
 const userRef = storeToRefs(userStore);
 const rpcRef = userRef.rpc;
 const exportFormat = userRef.exportFormat;
+const systemStore = useSystemConfigStore();
 const downloadType = ref<{
-	code: 'web' | 'jsonrpc' | 'idm' | 'aria2input' |''
+	code: 'web' | 'jsonrpc' | 'idm' | 'aria2input' | 'motrix' | 'jsonfile' | ''
 }>({
 	code: ''
 });
@@ -55,7 +69,9 @@ const rndDir = ref('');
 const progress = ref(0);
 const succeedTick = ref(0);
 const rpcInit = ref(false);
-const results: ParsedFile[] = [];
+const motrixProtocolLoading = ref(false);
+const results = reactive<ParsedFile[]>([]);
+const resultViewCollapsedRef = ref(false);
 
 const onNextStep = async (element: Element | undefined) => {
 	if (element && element.id === 'driver-step-select-download-type') {
@@ -159,17 +175,19 @@ const start = () => {
 	// 清除缓存
 	succeedTick.value = 0;
 	results.length = 0;
+	resultViewCollapsedRef.value = false;
 	blocked.value = true;
 	starting.value = true;
 	dialogStore.interceptUnload = true;
 	const body: WorkerRequestBody[] = [];
+	const short = downloadType.value.code === 'motrix';
 	const add = (file: TreeFileInfo & TreeNode) => {
 		if (file.children) {
 			file.children.forEach(child => {
 				add(child as typeof file);
 			});
 		} else {
-			body.push({fs_id: file.fs_id, reqId: requestId, surl, pwd, ...shareInfo.value});
+			body.push({fs_id: file.fs_id, reqId: requestId, surl, pwd, ...shareInfo.value, short});
 		}
 	};
 	selectedFiles.value.forEach(file => {
@@ -193,19 +211,16 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 			stop();
 			return;
 		}
+		resultViewCollapsedRef.value = true;
 		message.success('全部任务已完成！');
 		if (downloadType.value.code === 'web') {
 			await packageDownloadLinks(results, userRef.exportFormat.value);
-			stop();
-			return;
 		} else if (downloadType.value.code === 'idm') {
 			await package2IDMLinks(results);
-			stop();
-			return;
 		} else if (downloadType.value.code === 'aria2input') {
 			await package2Aria2Input(results);
-			stop();
-			return;
+		} else if (downloadType.value.code === 'jsonfile') {
+			await package2JsonFile(results);
 		}
 
 		stop();
@@ -219,21 +234,26 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 	}
 	if (m.type === 'success') {
 		succeedTick.value++;
-		if (downloadType.value.code === 'jsonrpc') {
+		results.push({
+			id: results.length + 1,
+			filename: m!!.body!!.filename,
+			link: m!!.body!!.dlink
+		});
+		if (downloadType.value.code === 'jsonrpc' || downloadType.value.code === 'motrix') {
 			const file = selectedFiles.value.find(f => String(f.fs_id) === String(m!!.body!!.filefsid));
 			if (file === undefined) {
 				message.warn(`${m!!.body!!.filename} 下载失败，请刷新页面后重试！`);
 				return;
 			}
 			const rootDir = file.path.replace(new RegExp(`/${rndDir.value.replace(/[\[\]]/g, '\\$&')}.*`, 'g'), '');
-			sendToRPC(m!!.body!!.dlink, m!!.body!!.filename, file.path.replace(new RegExp(`^${rootDir}`), '').replace(m!!.body!!.filename, ''));
+			const dir = file.path.replace(new RegExp(`^${rootDir}`), '').replace(m!!.body!!.filename, '');
+			if (downloadType.value.code === 'jsonrpc') {
+				sendToRPC(m!!.body!!.dlink, m!!.body!!.filename, dir);
+			} else if (downloadType.value.code === 'motrix') {
+				await addUri(m!!.body!!.dlink, m!!.body!!.filename, dir);
+			}
 			return;
 		}
-		// Web
-		results.push({
-			filename: m!!.body!!.filename,
-			link: m!!.body!!.dlink
-		});
 	}
 	if (m.type === 'error') {
 		message.warn(m.message!!);
@@ -262,6 +282,23 @@ const getRPConfig = async () => {
 		}
 	}).finally(() => rpcInit.value = false);
 };
+
+const wakenMotrixClient = async () => {
+	motrixProtocolLoading.value = true;
+	await waken();
+	message.default('已发起唤起 Motrix 客户端请求，如果没有唤起客户端，请确保安装了支持该协议的版本。');
+	motrixProtocolLoading.value = false;
+};
+
+const copyResult = (file: ParsedFile) => {
+	copyToClipboard(file.link);
+	message.success('复制下载链接成功！');
+};
+
+const copyUserAgent = () => {
+	copyToClipboard(systemStore.parse_ua);
+	message.success('复制成功！');
+}
 
 onBeforeUnmount(() => {
 	worker.setCallback(undefined);
@@ -297,6 +334,24 @@ watch(downloadType, value => {
 							      v-model:selectionKeys="selectedFilesOrigin"/>
 						</BlockUI>
 					</Fieldset>
+					<div class="mt-4">
+						<Fieldset legend="解析结果" toggleable :collapsed="!resultViewCollapsedRef">
+							<DataTable :value="results" dataKey="id">
+								<template #empty>
+									暂时任何解析数据！
+								</template>
+								<template #header>
+									<Button @click="copyUserAgent">复制 User-Agent</Button>
+								</template>
+								<Column field="filename" header="文件名"></Column>
+								<Column header="操作">
+									<template #body="item">
+										<Button icon="pi pi-copy" rounded class="mb-2 mr-2" @click="copyResult(item.data)" />
+									</template>
+								</Column>
+							</DataTable>
+						</Fieldset>
+					</div>
 				</div>
 				<div class="col-12 lg:col-4 xl:col-4">
 					<Fieldset legend="文件信息" id="driver-step-file-count">
@@ -329,8 +384,10 @@ watch(downloadType, value => {
 								<Dropdown v-model="downloadType" :disabled="blocked"
 								          :options="[{name: 'Web', code: 'web'},
 								          {name: 'Aria2 JSON RPC (推荐)', code: 'jsonrpc'},
+								          {name: 'Motrix (推荐)', code: 'motrix'},
 								          {name: 'IDM 下载', code: 'idm'},
-								          {name: 'Aria2 Input', code: 'aria2input'}]"
+								          {name: 'Aria2 Input', code: 'aria2input'},
+								          {name: 'JSON 文件', code: 'jsonfile'}]"
 								          optionLabel="name" placeholder="选择下载方式"/>
 							</div>
 						</div>
@@ -365,7 +422,8 @@ watch(downloadType, value => {
 									<InputText type="text" v-model="rpcRef.token"/>
 								</div>
 								<div class="field col">
-									<Button label="检测连通性" style="margin-top: 25px;" id="driver-step-test-json-rpc" :loading="rpcInit"
+									<Button label="检测连通性" style="margin-top: 25px;" id="driver-step-test-json-rpc"
+									        :loading="rpcInit"
 									        @click="testConnectionRPC"></Button>
 								</div>
 							</div>
@@ -375,7 +433,8 @@ watch(downloadType, value => {
 									<InputText type="text" placeholder="" v-model="rpcRef.basedir"/>
 								</div>
 								<div class="field col">
-									<Button label="获取配置" style="margin-top: 25px;" id="driver-step-test-json-rpc" :loading="rpcInit"
+									<Button label="获取配置" style="margin-top: 25px;" id="driver-step-test-json-rpc"
+									        :loading="rpcInit"
 									        @click="getRPConfig"></Button>
 								</div>
 							</div>
@@ -404,6 +463,45 @@ watch(downloadType, value => {
 							<p><strong>非专业人士请使用Aria2 JSON RPC模式</strong><br>
 								使用 aria2 命令行输入文件开始下载. (aria2c -i task.txt)<br>
 							</p>
+						</template>
+						<template v-if="downloadType.code === 'motrix'">
+							<Divider align="left" type="solid">
+								<b>Motrix Deep Links</b>
+							</Divider>
+							<p><strong>Motrix Deep Links</strong> 是<strong>F4Team</strong>对<strong>Motrix</strong>客户端进行修改并增加的一个功能，它通过
+								URL Scheme 与<strong>Motrix</strong>进行通信，该功能现暂未提交到<strong>Motrix</strong>官方仓库，请前往我们
+								<a href="https://github.com/f4team-cn/f4team-motrix" target="_blank"><strong>仓库(https://github.com/f4team-cn/f4team-motrix)</strong></a>
+								的 Releases 中下载。</p>
+							<Message :closable="false">
+								为了更好的体验，如果弹出了如下的对话框，请<strong>勾选【始终允许】</strong>，最后点击打开即可！
+							</Message>
+							<Card>
+								<template #content>
+									<Image :src="allowAlwaysOpenImage" height="150" width="320" preview/>
+								</template>
+							</Card>
+							<div class="formgrid grid">
+								<div class="field col">
+									<Button label="测试唤起" style="margin-top: 25px;" id="driver-step-test-json-rpc"
+									        :loading="motrixProtocolLoading"
+									        @click="wakenMotrixClient"></Button>
+								</div>
+							</div>
+							<Message :closable="false" severity="warn">值得注意的是，使用本下载方式，依然需要更改下载目录，即本下载方式和<strong>Aria2 JSON RPC</strong>的下载目录数据通用，你可以先选择<strong>Aria2 JSON RPC</strong>下载方式，获取默认配置后再切换回本下载方式，即可获取Motrix中已经配置的下载目录，你也可以在下方输入框中手动输入下载目录。</Message>
+							<div class="formgrid grid">
+								<div class="field col">
+									<label for="basedir">下载目录(最好不要留空)</label>
+									<InputText type="text" placeholder="" v-model="rpcRef.basedir"/>
+								</div>
+							</div>
+						</template>
+						<template v-if="downloadType.code === 'jsonfile'">
+							<Divider align="left" type="solid">
+								<b>导出为 JSON 文件</b>
+							</Divider>
+							<Message :closable="false" severity="info">
+								本下载方式生成了一个 JSON 文件，开发者可基于本数据二次开发。
+							</Message>
 						</template>
 					</Fieldset>
 					<Fieldset legend="准备下载">

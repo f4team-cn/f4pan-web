@@ -18,17 +18,8 @@ UserAgent：${systemConfig.parse_ua}
 `;
 }
 
-/**
- * 浏览器打包下载
- * @param results
- * @param format
- */
-export async function packageDownloadLinks(results: ParsedFile[], format: string) {
-	const zip = new JSZip();
+export async function downloadZip(zip: JSZip) {
 	const message = useMessage();
-	zip.file('说明.txt', getREADME());
-	const content = results.map(v => format.replace(/{filename}/g, v.filename).replace(/{url}/g, v.link)).join('\n');
-	zip.file('结果.txt', content);
 	try {
 		const blob = await zip.generateAsync({
 			type: 'blob',
@@ -43,8 +34,21 @@ export async function packageDownloadLinks(results: ParsedFile[], format: string
 	} catch (e) {
 		console.error(e);
 		message.error('打包失败，请重新尝试或使用 JSON RPC 下载。');
+		return false;
 	}
-	return false;
+}
+
+/**
+ * 浏览器打包下载
+ * @param results
+ * @param format
+ */
+export async function packageDownloadLinks(results: ParsedFile[], format: string) {
+	const zip = new JSZip();
+	zip.file('说明.txt', getREADME());
+	const content = results.map(v => format.replace(/{filename}/g, v.filename).replace(/{url}/g, v.link)).join('\n');
+	zip.file('结果.txt', content);
+	return await downloadZip(zip);
 }
 
 /**
@@ -53,31 +57,15 @@ export async function packageDownloadLinks(results: ParsedFile[], format: string
  */
 export async function package2IDMLinks(results: ParsedFile[]) {
 	const zip = new JSZip();
-	const message = useMessage();
 	const systemConfig = useSystemConfigStore();
-	const UA = systemConfig.parse_ua
+	const UA = systemConfig.parse_ua;
 	zip.file('说明.txt', getREADME());
 	// https://github.com/MotooriKashin/ef2 第三方的ef2工具支持指定文件名，官方的不支持，但是不会影响读取。
 	const content = results.map(v => {
 		return `<\r\n${v.link}\r\nUser-Agent: ${UA}\r\nfilename: ${v.filename}\r\n>`;
 	}).join('\r\n');
 	zip.file('任务.ef2', content + '\r\n');
-	try {
-		const blob = await zip.generateAsync({
-			type: 'blob',
-			compression: 'DEFLATE',
-			compressionOptions: {
-				level: 9
-			}
-		});
-		FileSaver.saveAs(blob, 'F4Pan-' + Date.now() + '.zip');
-		message.success('打包成功！正在下载……');
-		return true;
-	} catch (e) {
-		console.error(e);
-		message.error('打包失败，请重新尝试或使用 JSON RPC 下载。');
-	}
-	return false;
+	return downloadZip(zip);
 }
 
 /**
@@ -102,4 +90,26 @@ export async function package2Aria2Input(results: ParsedFile[]) {
 		message.error('生成失败，请重新尝试或使用 JSON RPC 下载。');
 	}
 	return false;
+}
+
+/**
+ * 打包为 JSON 文件
+ * @param results
+ */
+export async function package2JsonFile(results: ParsedFile[]) {
+	const systemConfig = useSystemConfigStore();
+	const message = useMessage();
+	const data = {
+		tips: getREADME(),
+		ua: systemConfig.parse_ua,
+		results
+	};
+	try {
+		const blob = new Blob([JSON.stringify(data, undefined, 4)], { type: 'application/json' });
+		FileSaver.saveAs(blob, 'data.json');
+		message.success('生成成功，正在下载……');
+	} catch (e) {
+		console.error(e);
+		message.error('生成失败，请重新尝试或使用 JSON RPC 下载。');
+	}
 }

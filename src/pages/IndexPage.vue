@@ -42,7 +42,7 @@ const items = ref<MenuItem[]>([
 			},
 			{
 				label: '新手教程',
-				icon: 'pi',
+				icon: 'pi pi-graduation-cap',
 				command: () => {
 					window.localStorage.removeItem('driver-step-done');
 					actionOne();
