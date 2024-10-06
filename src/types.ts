@@ -213,6 +213,7 @@ export type WorkerRequest = {
 };
 
 export type WorkerRequestBody = Pick<File, 'fs_id'> & ShareInfo & {
+	short?: boolean;
 	reqId: string;
 	surl: string;
 	pwd: string;
