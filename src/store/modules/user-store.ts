@@ -19,7 +19,8 @@ export const useUserStore = defineStore('user-store', {
 				host: 'localhost',
 				port: '6800',
 				token: '',
-				basedir: ''
+				basedir: '',
+				type: 'http'
 			}
 		};
 	},

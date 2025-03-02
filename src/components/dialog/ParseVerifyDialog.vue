@@ -38,17 +38,23 @@ const next = () => {
 	}
 	show.value = false;
 };
+
+const onKeyDown = (e: KeyboardEvent) => {
+	if (e.key === 'Enter' || e.keyCode === 13) {
+		next();
+	}
+};
 </script>
 
 <template>
-	<Dialog v-model:visible="show" modal header="解析密码" :style="{ width: '50rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
+	<Dialog v-model:visible="show" modal header="解析密码" :style="{ width: '25rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }">
 		<div class="flex align-items-center gap-3 mb-5" v-if="refs.requires_key.value === 'fixed'">
 			<label for="email" class="font-semibold w-6rem">密码</label>
 			<InputText class="flex-auto" autocomplete="off" type="password" v-model="password" />
 		</div>
 		<div class="flex align-items-center gap-3 mb-5" v-if="refs.requires_key.value === 'dynamic'">
 			<label for="email" class="font-semibold w-6rem">密码</label>
-			<InputOtp class="flex-auto" :length="6" v-model="password"></InputOtp>
+			<InputOtp class="flex-auto" :length="6" v-model="password" @keydown="onKeyDown"></InputOtp>
 		</div>
 		<div class="flex justify-content-end gap-2">
 			<Button type="button" label="取消" severity="secondary" @click="cancel"></Button>

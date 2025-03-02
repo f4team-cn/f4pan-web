@@ -31,6 +31,7 @@ export type RPCConfig = {
 	port: string;
 	token: string;
 	basedir: string;
+	type: 'http' | 'https' | 'ws' | 'wss'
 };
 
 export type FileListResult = {
