@@ -9,8 +9,9 @@ import Dropdown from 'primevue/dropdown';
 import Button from 'primevue/button';
 import Divider from 'primevue/divider';
 import ButtonGroup from 'primevue/buttongroup';
-import Toolbar from 'primevue/toolbar';
-import Panel from 'primevue/panel';
+import ScrollPanel from 'primevue/scrollpanel';
+import Skeleton from 'primevue/skeleton';
+
 import {
 	computed,
 	defineAsyncComponent,
@@ -35,6 +36,7 @@ import delay from '@/utils/delay';
 import copyToClipboard from 'copy-to-clipboard';
 import { type DownloadTypeCode, downloadTypes } from '@/utils/download-types';
 import Loading from '@/pages/download/Loading.vue';
+import { useLogger } from '@/hooks/useLogger';
 
 const route = useRoute();
 const router = useRouter();
@@ -62,10 +64,13 @@ const progress = ref(0);
 const succeedTick = ref(0);
 const results = reactive<ParsedFile[]>([]);
 const resultViewCollapsedRef = ref(false);
+const loggerCollapsedRef = ref(false);
+const { logs, log } = useLogger();
 const downloadComponent = computed<any>(() => {
 	if (downloadType.value.code === '') return null;
 	let type = downloadTypes.filter(v => v.code == downloadType.value.code)[0];
 	if (!type) return null;
+	log('切换下载方式:' + downloadType.value.code);
 	// noinspection TypeScriptCheckImport
 	return defineAsyncComponent({
 		loader: () => import(`./download/${type.page}.vue`),
@@ -75,7 +80,8 @@ const downloadComponent = computed<any>(() => {
 const downloadComponentRef = ref<{
 	onStart: () => any,
 	onSuccess: (response: WorkerResponse, rootDir: string | undefined, fileDir: string | undefined) => any,
-	onDone: (results: ParsedFile[]) => any
+	onDone: (results: ParsedFile[]) => any,
+	isValid: () => boolean,
 } | null>(null);
 
 const onNextStep = async (element: Element | undefined) => {
@@ -89,10 +95,12 @@ const onNextStep = async (element: Element | undefined) => {
 
 onMounted(async () => {
 	try {
+		log('开始获取文件列表……');
 		const { data: response } = await getFileList(requestId, undefined);
 		const { data } = response;
 		const files = data.list;
 		rndDir.value = files[0].filename;
+		log('文件列表获取成功，正在解析处理……');
 		const { root, tree } = dealFileList(files);
 		shareInfo.value = data.shareinfo;
 		diskRoot.value = root;
@@ -103,6 +111,7 @@ onMounted(async () => {
 		}
 	} catch (e) {
 		console.error(e);
+		log('获取并解析文件列表失败，请返回或刷新重试！');
 		message.error('数据出错！请重新解析！');
 		router.back();
 	}
@@ -112,12 +121,19 @@ const onNodeExpand = async (node: TreeNode) => {
 	if (node.children) return;
 	node.loading = true;
 	try {
+		log(`打开文件夹 【${node.label}】 ……`);
 		const { data: response } = await getFileList(requestId, node.path);
+		if (response.data.list.length === 0) {
+			log(`文件夹 【${node.label}】 为空`);
+
+		}
 		const { data } = response;
 		const files = data.list;
 		const { tree } = dealFileList(files);
 		node.children = tree;
+		log(`打开文件夹 【${node.label}】 成功`);
 	} catch {
+		log(`打开文件夹 【${node.label}】 出错`, 'warning');
 		message.error('打开文件夹出错！');
 	} finally {
 		node.loading = false;
@@ -136,6 +152,7 @@ const selectFile = (node: TreeNode & TreeFileInfo) => {
 	} else {
 		const found = selectedFiles.value.find(v => v.fs_id === node.fs_id);
 		if (!found) {
+			log(`选择文件 【${node.label}】`);
 			selectedFiles.value.push(node);
 		}
 	}
@@ -147,6 +164,7 @@ const unSelectFile = (node: TreeNode & TreeFileInfo) => {
 	} else {
 		const found = selectedFiles.value.findIndex(v => v.fs_id === node.fs_id);
 		if (found !== -1) {
+			log(`取消选择文件 【${node.label}】`);
 			selectedFiles.value.splice(found, 1);
 		}
 	}
@@ -177,6 +195,11 @@ const start = () => {
 		message.warn('请选择下载方式！');
 		return;
 	}
+	if (downloadComponentRef.value?.isValid?.() === false) {
+		log('没有通过对应下载方式的安全检查', 'warning');
+		return;
+	}
+	log('开始解析任务……');
 	// 清除缓存
 	succeedTick.value = 0;
 	results.length = 0;
@@ -199,6 +222,7 @@ const start = () => {
 	selectedFiles.value.forEach(file => {
 		add(file);
 	});
+	log('启动后台任务……');
 	worker.addTask(body);
 };
 
@@ -209,12 +233,15 @@ const stop = () => {
 	dialogStore.interceptUnload = false;
 	progress.value = 0;
 	succeedTick.value = 0;
+	log('停止解析任务……');
 };
 
 const onWorkerMessage = async (m: WorkerResponse) => {
 	if (m.type === 'done') {
 		if (succeedTick.value === 0) {
+			log('后台任务完成', 'success');
 			message.warn('全部任务失败，请重新获取！');
+			log('全部任务失败', 'warning');
 			stop();
 			return;
 		}
@@ -222,6 +249,7 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 			downloadComponentRef.value?.onDone?.(results);
 		}
 		resultViewCollapsedRef.value = true;
+		log('后台任务完成', 'success');
 		message.success('全部任务已完成！');
 
 		stop();
@@ -231,6 +259,7 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 		const max = m.max || 1;
 		const n = m.n || 0;
 		progress.value = Math.round(n / max * 100);
+		log(`更新进度 ${progress.value}%`);
 		return;
 	}
 	if (m.type === 'success') {
@@ -243,9 +272,11 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 		const file = selectedFiles.value.find(f => String(f.fs_id) === String(m!!.body!!.filefsid));
 		const rootDir = file?.path?.replace(new RegExp(`/${rndDir.value.replace(/[\[\]]/g, '\\$&')}.*`, 'g'), '');
 		const dir = file?.path?.replace(new RegExp(`^${rootDir}`), '')?.replace(m!!.body!!.filename, '');
+		log(`文件 ${file?.label} 解析完成，正在通知 ${downloadType.value.code} 下载……`);
 		downloadComponentRef.value?.onSuccess?.(m, rootDir, dir);
 	}
 	if (m.type === 'error') {
+		log('后台任务出错，' + m.message);
 		message.warn(m.message!!);
 	}
 };
@@ -277,19 +308,19 @@ worker.setCallback(onWorkerMessage);
 	<div class="layout-main-container">
 		<div class="layout-main">
 			<div class="grid">
-				<div class="col-12 lg:col-8 xl:col-8" id="driver-step-file-list">
-					<Fieldset legend="文件列表">
+				<div class="col-12 lg:col-8 xl:col-8">
+					<Fieldset legend="文件列表" id="driver-step-file-list">
 						<BlockUI :blocked="blocked">
-<!--							<Toolbar>-->
-<!--								<template #start>-->
-<!--									<Button icon="pi pi-arrow-up-right-and-arrow-down-left-from-center" v-tooltip="'全部展开'" class="mr-2" severity="secondary" />-->
-<!--									<Button icon="pi pi-arrow-down-left-and-arrow-up-right-to-center" v-tooltip="'全部收起'" class="mr-2" severity="secondary" />-->
-<!--									<Button icon="pi pi-expand" v-tooltip="'反选'" severity="secondary" />-->
-<!--								</template>-->
-<!--							</Toolbar>-->
+							<!--							<Toolbar>-->
+							<!--								<template #start>-->
+							<!--									<Button icon="pi pi-arrow-up-right-and-arrow-down-left-from-center" v-tooltip="'全部展开'" class="mr-2" severity="secondary" />-->
+							<!--									<Button icon="pi pi-arrow-down-left-and-arrow-up-right-to-center" v-tooltip="'全部收起'" class="mr-2" severity="secondary" />-->
+							<!--									<Button icon="pi pi-expand" v-tooltip="'反选'" severity="secondary" />-->
+							<!--								</template>-->
+							<!--							</Toolbar>-->
 							<ProgressBar v-if="blocked || treeLoading" mode="indeterminate"
 							             style="height: 6px"></ProgressBar>
-<!--							<Divider class="my-5" />-->
+							<!--							<Divider class="my-5" />-->
 							<Tree loadingMode="icon" :value="filesRef" selection-mode="checkbox"
 							      @node-expand="onNodeExpand" :loading="treeLoading" @nodeSelect="onNodeSelect"
 							      @nodeUnselect="onNodeUnSelect"
@@ -339,7 +370,7 @@ worker.setCallback(onWorkerMessage);
 							</li>
 						</ul>
 					</Fieldset>
-					<Fieldset legend="下载配置" class="mt-4 mb-4 p-fluid" toggleable :disabled="blocked"
+					<Fieldset legend="下载配置" class="mt-3 p-fluid" toggleable :disabled="blocked"
 					          id="driver-step-select-download-type">
 						<div class="formgrid grid">
 							<div class="field col">
@@ -352,6 +383,20 @@ worker.setCallback(onWorkerMessage);
 						<template v-if="downloadType.code.length !== 0">
 							<component :is="downloadComponent" ref="downloadComponentRef" />
 						</template>
+					</Fieldset>
+					<Fieldset legend="解析日志" toggleable class="mt-3 mb-3" :collapsed="!loggerCollapsedRef">
+						<ScrollPanel class="logger-container" v-if="logs.length !== 0"
+						             :pt="{
+								wrapper: {
+									style: {
+										'border-right': '10px solid var(--surface-ground)'
+									}
+								},
+								bary: 'hover:bg-primary-400 bg-primary-300 opacity-100'
+							}">
+							<p v-for="log in logs" :data-type="log.type" v-text="log.data"></p>
+						</ScrollPanel>
+						<Skeleton v-else width="100%" height="180px"></Skeleton>
 					</Fieldset>
 					<Fieldset legend="准备下载">
 						<ProgressBar :mode="starting && progress === 0 ? 'indeterminate' : 'determinate'"
@@ -371,6 +416,32 @@ worker.setCallback(onWorkerMessage);
 	</div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+.logger {
+	&-container {
+		width: 100%;
+		height: 180px;
 
+		p {
+			margin-top: 0;
+			margin-bottom: 0;
+
+			&[data-type="success"] {
+				color: #16a34a;
+			}
+
+			&[data-type="warning"] {
+				color: #ca8a04;
+			}
+
+			&[data-type="info"] {
+				color: #2563eb;
+			}
+
+			&[data-type="error"] {
+				color: #dc2626;
+			}
+		}
+	}
+}
 </style>

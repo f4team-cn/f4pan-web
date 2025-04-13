@@ -4,6 +4,7 @@ import {getSystemStatus} from '@/services/system';
 import {onMounted, ref} from 'vue';
 import {useMessage} from '@/hooks/useMessage';
 import {getStatisticIPCount} from '@/services/statistic';
+import HistoryTotal from '@/components/HistoryTotal.vue';
 
 const message = useMessage();
 const parsedAllCount = ref('……');
@@ -120,6 +121,14 @@ onMounted(() => {
 				</Panel>
 			</div>
 		</div>
+		<Panel class="mt-4">
+			<template #header>
+				<div class="flex align-items-center gap-2">
+					<span class="font-bold">历史统计</span>
+				</div>
+			</template>
+			<HistoryTotal :days="8" />
+		</Panel>
 	</div>
 </template>
 

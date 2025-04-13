@@ -10,6 +10,7 @@ import InputText from 'primevue/inputtext';
 import type { WorkerResponse } from '@/types';
 import Aria2RpcClient from '@/utils/aria2';
 import Tag from 'primevue/tag';
+import { useLogger } from '@/hooks/useLogger';
 
 let aria2Client: Aria2RpcClient | undefined = undefined;
 const userStore = useUserStore();
@@ -18,6 +19,7 @@ const userRef = storeToRefs(userStore);
 const rpcRef = userRef.rpc;
 const rpcInit = ref(false);
 const message = useMessage();
+const { log } = useLogger();
 const rpcConnectionState = reactive({
 	ws: false,
 	test: false
@@ -30,28 +32,30 @@ const rpcConnection = computed<boolean>(() => rpcConnectionState.ws && rpcConnec
 
 const getRPConfig = async () => {
 	if (!rpcConnection.value) {
-		message.warn('请先连接 Aria2。');
+		message.warn('请先连接 Aria2 客户端。');
 		return;
 	}
 	rpcInit.value = true;
 	const body = await aria2Client?.call('aria2.getGlobalOption', []);
 	if (!body) {
-		message.success('获取 Aria2 配置成功！');
+		log('获取 Aria2 客户端 配置失败', 'error');
+		message.warn('获取 Aria2 客户端 配置失败！');
 		return;
 	}
 	const info = body.result as Record<string, string>;
 	if (info.dir) {
 		rpcRef.value.basedir = info.dir;
-		message.success('获取 Aria2 配置成功！');
+		message.success('获取 Aria2 客户端 配置成功！');
 	}
 	rpcInit.value = false;
 };
 
 const onSuccess = (response: WorkerResponse, rootDir: string | undefined, fileDir: string | undefined) => {
 	if (!rpcConnection.value) {
-		message.error('请先连接 Aria2。');
+		message.error('请先连接 Aria2 客户端。');
 		return;
 	}
+	log(`推送 ${response!!.body!!.filename} 到 Aria2 客户端 `);
 	const basedir = userStore.rpc.basedir.replace(/\/$/, '');
 	const params = [[response!!.body!!.dlink],
 		{
@@ -60,12 +64,17 @@ const onSuccess = (response: WorkerResponse, rootDir: string | undefined, fileDi
 			dir: `${basedir}/${fileDir}`
 		}];
 	aria2Client?.call(Aria2RpcClient.AddUriAction, params).then(() => {
-		message.success(`成功推送 ${response!!.body!!.filename} 到 Aria2 客户端！`)
-	}).catch(() => message.warn(`推送 ${response!!.body!!.filename} 到 Aria2 客户端失败。`))
+		log(`成功推送 ${response!!.body!!.filename} 到 Aria2 客户端！`, 'success');
+		message.success(`成功推送 ${response!!.body!!.filename} 到 Aria2 客户端！`);
+	}).catch(() => {
+		message.warn(`推送 ${response!!.body!!.filename} 到 Aria2 客户端失败。`);
+		log(`推送 ${response!!.body!!.filename} 到 Aria2 客户端失败。`, 'warning');
+	});
 };
 
 const initClient = () => {
 	if (aria2Client) nullClient();
+	log('初始化 Aria2 连接');
 	aria2Client = new Aria2RpcClient({
 		host: rpcRef.value.host,
 		port: parseInt(rpcRef.value.port),
@@ -73,8 +82,12 @@ const initClient = () => {
 		token: rpcRef.value.token,
 		protocol: transmissionProtocol.value.code.startsWith('http') ? 'http' : 'ws'
 	});
-	aria2Client.onOpen = () => rpcConnectionState.ws = true;
-	aria2Client.onClose = () => rpcConnectionState.ws = false;
+	aria2Client.onOpen = () => {
+		rpcConnectionState.ws = true;
+	};
+	aria2Client.onClose = () => {
+		rpcConnectionState.ws = false;
+	};
 };
 
 const nullClient = () => {
@@ -86,14 +99,17 @@ const nullClient = () => {
 
 const toggleRpcConnection = async () => {
 	if (rpcConnection.value) {
+		log('关闭 Aria2 Client', 'warning');
 		aria2Client?.close();
 		rpcConnectionState.ws = false;
 		rpcConnectionState.test = false;
 	} else {
+		log('创建 Aria2 Client', 'warning');
 		rpcInit.value = true;
 		try {
 			await aria2Client?.init();
 		} catch (e: any) {
+			log(e?.message ?? '未知的 Aria2 Client 错误', 'error');
 			message.error(e?.message);
 			rpcInit.value = false;
 			return;

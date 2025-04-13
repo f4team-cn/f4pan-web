@@ -3,7 +3,7 @@ import type {
 	AddSystemSettingResponse,
 	DeleteSystemSettingResponse,
 	SystemConfigResponse,
-	SystemSetting, SystemSettingListResponse, SystemStatusResponse,
+	SystemSetting, SystemSettingListResponse, SystemStatusDailyResponse, SystemStatusResponse,
 	UpdateSystemSettingResponse, UseSystemSettingResponse
 } from '@/types';
 
@@ -91,5 +91,19 @@ export function UseSystemConfig(id: number) {
 		url: '/admin/systems/use',
 		data: { id },
 		withLogin: true
+	});
+}
+
+/**
+ * 获取历史统计
+ * @param days
+ */
+export function getDailyStatus(days: number) {
+	return request<SystemStatusDailyResponse>({
+		method: 'GET',
+		url: '/public/get_past_daily_data',
+		params: {
+			past_days: days
+		}
 	});
 }

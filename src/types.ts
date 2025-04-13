@@ -145,6 +145,14 @@ export type ApiKey = {
 	use_count: number;
 };
 
+export type DailyTotalData = {
+	stat_date: string;
+	parsing_traffic: number;
+	parsing_count: number;
+	created_at: string;
+	format_parsing_traffic: string;
+};
+
 // ===================== 工具
 
 export type MakeOptional<T, K extends keyof T> = Partial<Pick<T, K>> & Omit<T, K>;
@@ -161,6 +169,7 @@ export type FileListResponse = BaseResponse<FileListResult>;
 export type UseApiKeyResponse = BaseResponse<string>;
 export type ParseFileResponse = BaseResponse<ParsedFileResult>;
 export type SystemStatusResponse = BaseResponse<SystemStatusResult>;
+export type SystemStatusDailyResponse = BaseResponse<DailyTotalData[]>;
 
 export type NoticeResponse = BaseResponse<Notice>;
 export type NoticeListResponse = BaseResponse<Notice[]>;

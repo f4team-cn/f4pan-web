@@ -33,7 +33,15 @@ const onSuccess = (response: WorkerResponse, rootDir: string | undefined, fileDi
 	});
 };
 
-defineExpose({ onSuccess });
+const isValid = () => {
+	if (rpcRef.value.basedir.length === 0) {
+		message.warn('在 Motrix 下载方式中，下载目录不能为空，');
+		return false;
+	}
+	return true;
+};
+
+defineExpose({ onSuccess, isValid });
 </script>
 
 <template>
