@@ -5,6 +5,7 @@ import Fieldset from 'primevue/fieldset';
 import BlockUI from 'primevue/blockui';
 import ProgressBar from 'primevue/progressbar';
 import Tree from 'primevue/tree';
+import Toolbar from 'primevue/toolbar';
 import Dropdown from 'primevue/dropdown';
 import Button from 'primevue/button';
 import Divider from 'primevue/divider';
@@ -59,6 +60,8 @@ const downloadType = ref<{
 }>({
 	code: ''
 });
+const expandingAll = ref(false);
+const expandedKeys = ref<Record<string | number, boolean>>({});
 const rndDir = ref('');
 const progress = ref(0);
 const succeedTick = ref(0);
@@ -131,6 +134,8 @@ const onNodeExpand = async (node: TreeNode) => {
 		const files = data.list;
 		const { tree } = dealFileList(files);
 		node.children = tree;
+		console.log(node)
+		console.log(expandedKeys.value)
 		log(`打开文件夹 【${node.label}】 成功`);
 	} catch {
 		log(`打开文件夹 【${node.label}】 出错`, 'warning');
@@ -291,6 +296,87 @@ const copyUserAgent = () => {
 	message.success('复制成功！');
 };
 
+const expandAllNodes = async () => {
+	if (!filesRef.value || filesRef.value.length === 0) return;
+	log('展开全部文件夹...');
+	if (!filesRef.value || filesRef.value.length === 0) {
+		log('文件列表为空，无法全部展开并加载', 'info');
+		return;
+	}
+	if (expandingAll.value) {
+		log('正在进行全部展开和加载任务，请勿重复点击', 'warning');
+		return;
+	}
+
+	log('开始全部展开并加载所有文件夹...');
+	expandingAll.value = true;
+	blocked.value = true;
+
+	const loadAndExpandNode = async (node: (TreeFileInfo & TreeNode)) => {
+		if (node.isdir !== 1 && node.leaf) return;
+		if (!node.path) return;
+		if (node.key !== undefined) {
+			expandedKeys.value[node.key] = true;
+			await nextTick();
+			await delay(10);
+		}
+
+		if (node.children === undefined) {
+			log(`加载文件夹 【${node.label}】 的内容...`);
+			node.loading = true;
+			try {
+				const { data: response } = await getFileList(requestId, node.path);
+				const files = response.data.list;
+
+				if (!files || files.length === 0) {
+					node.children = [];
+				} else {
+					const { tree: childrenTree } = dealFileList(files);
+					node.children = childrenTree;
+				}
+				log(`文件夹 【${node.label}】 加载成功`);
+
+			} catch (e) {
+				console.error(e);
+				log(`加载文件夹 【${node.label}】 出错`, 'warning');
+				message.error(`加载文件夹 ${node.label} 出错！`);
+				node.children = [];
+			} finally {
+				node.loading = false;
+				await nextTick();
+				await delay(10);
+			}
+		}
+		if (node.children && Array.isArray(node.children)) {
+			for (const childNode of node.children as (TreeFileInfo & TreeNode)[]) {
+				if (childNode.isdir === 1 || !childNode.leaf) {
+					await loadAndExpandNode(childNode);
+				}
+			}
+		}
+	};
+
+	try {
+		for (const rootNode of filesRef.value as (TreeFileInfo & TreeNode)[]) {
+			await loadAndExpandNode(rootNode);
+		}
+		log('全部文件夹展开和加载任务完成', 'success');
+
+	} catch (e) {
+		console.error(e);
+		log('全部展开和加载过程中发生错误', 'error');
+		message.error('全部展开和加载过程中发生错误！');
+	} finally {
+		expandingAll.value = false;
+		blocked.value = false;
+	}
+};
+
+const collapseAllNodes = () => {
+	log('收起全部文件夹...');
+	expandedKeys.value = {};
+};
+
 onBeforeUnmount(() => {
 	worker.setCallback(undefined);
 });
@@ -311,20 +397,21 @@ worker.setCallback(onWorkerMessage);
 				<div class="col-12 lg:col-8 xl:col-8">
 					<Fieldset legend="文件列表" id="driver-step-file-list">
 						<BlockUI :blocked="blocked">
-							<!--							<Toolbar>-->
-							<!--								<template #start>-->
-							<!--									<Button icon="pi pi-arrow-up-right-and-arrow-down-left-from-center" v-tooltip="'全部展开'" class="mr-2" severity="secondary" />-->
-							<!--									<Button icon="pi pi-arrow-down-left-and-arrow-up-right-to-center" v-tooltip="'全部收起'" class="mr-2" severity="secondary" />-->
-							<!--									<Button icon="pi pi-expand" v-tooltip="'反选'" severity="secondary" />-->
-							<!--								</template>-->
-							<!--							</Toolbar>-->
+							<Toolbar>
+								<template #start>
+									<Button icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
+											v-tooltip="'全部展开'" class="mr-2" severity="secondary" @click="expandAllNodes" />
+									<Button icon="pi pi-arrow-down-left-and-arrow-up-right-to-center"
+											v-tooltip="'全部收起'" class="mr-2" severity="secondary" @click="collapseAllNodes" />
+								</template>
+							</Toolbar>
 							<ProgressBar v-if="blocked || treeLoading" mode="indeterminate"
-							             style="height: 6px"></ProgressBar>
+										 style="height: 6px"></ProgressBar>
 							<!--							<Divider class="my-5" />-->
 							<Tree loadingMode="icon" :value="filesRef" selection-mode="checkbox"
-							      @node-expand="onNodeExpand" :loading="treeLoading" @nodeSelect="onNodeSelect"
-							      @nodeUnselect="onNodeUnSelect"
-							      v-model:selectionKeys="selectedFilesOrigin" />
+								  @node-expand="onNodeExpand" :loading="treeLoading" @nodeSelect="onNodeSelect"
+								  @nodeUnselect="onNodeUnSelect"
+								  v-model:selectionKeys="selectedFilesOrigin" v-model:expandedKeys="expandedKeys" />
 						</BlockUI>
 					</Fieldset>
 					<div class="mt-4">
@@ -340,7 +427,7 @@ worker.setCallback(onWorkerMessage);
 								<Column header="操作">
 									<template #body="item">
 										<Button v-tooltip="'复制链接'" icon="pi pi-copy" rounded class="mb-2 mr-2"
-										        @click="copyResult(item.data)" />
+												@click="copyResult(item.data)" />
 									</template>
 								</Column>
 							</DataTable>
@@ -371,13 +458,13 @@ worker.setCallback(onWorkerMessage);
 						</ul>
 					</Fieldset>
 					<Fieldset legend="下载配置" class="mt-3 p-fluid" toggleable :disabled="blocked"
-					          id="driver-step-select-download-type">
+							  id="driver-step-select-download-type">
 						<div class="formgrid grid">
 							<div class="field col">
 								<label for="type">下载方式</label>
 								<Dropdown v-model="downloadType" :disabled="blocked"
-								          :options="downloadTypes"
-								          optionLabel="name" placeholder="选择下载方式" />
+										  :options="downloadTypes"
+										  optionLabel="name" placeholder="选择下载方式" />
 							</div>
 						</div>
 						<template v-if="downloadType.code.length !== 0">
@@ -386,7 +473,7 @@ worker.setCallback(onWorkerMessage);
 					</Fieldset>
 					<Fieldset legend="解析日志" toggleable class="mt-3 mb-3" :collapsed="!loggerCollapsedRef">
 						<ScrollPanel class="logger-container" v-if="logs.length !== 0"
-						             :pt="{
+									 :pt="{
 								wrapper: {
 									style: {
 										'border-right': '10px solid var(--surface-ground)'
@@ -400,13 +487,13 @@ worker.setCallback(onWorkerMessage);
 					</Fieldset>
 					<Fieldset legend="准备下载">
 						<ProgressBar :mode="starting && progress === 0 ? 'indeterminate' : 'determinate'"
-						             v-if="starting"
-						             :value="progress"></ProgressBar>
+									 v-if="starting"
+									 :value="progress"></ProgressBar>
 						<Divider />
 						<ButtonGroup>
 							<Button label="开始" icon="pi pi-check" :disabled="selectedFiles.length === 0 || starting"
-							        id="driver-step-done"
-							        @click="start" />
+									id="driver-step-done"
+									@click="start" />
 							<Button label="取消" icon="pi pi-times" :disabled="!starting" @click="stop" />
 						</ButtonGroup>
 					</Fieldset>
