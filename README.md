@@ -7,6 +7,10 @@
 后端： [https://github.com/f4team-cn/f4pan](https://github.com/f4team-cn/f4pan)
 本仓库与后端仓库之间所有条款、开源协议通用！
 
+# 快速部署
+
+[![使用 EdgeOne Pages 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?repository-url=https%3a%2f%2fgithub.com%2ff4team-cn%2ff4pan-web&output-directory=.%2Fdist&install-command=npm%20install&build-command=npm%20run%20build&env=VITE_API_URL&env-description=API%20Address)
+
 ## Modify Environment
 
 ```
