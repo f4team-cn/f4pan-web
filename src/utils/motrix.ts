@@ -11,7 +11,8 @@ export async function addUri(url: string, filename: string, dir?: string) {
 		out: filename,
 		dir: `${basedir}/${dir}`,
 		userAgent: system.parse_ua,
-		silent: true
+		silent: true,
+		'max-connection-per-server': 6 // 防止下载时批量请求重定向接口
 	});
 	await openUri(`motrix://command/application:new-task?${query}`);
 }
