@@ -18,7 +18,7 @@ Main.onmessage = async function (e) {
 };
 
 function doParse(data: WorkerRequestBody, n: number, max: number) {
-	const {reqId, surl, pwd, fs_id, seckey, share_id, uk, short} = data;
+	const {reqId, surl, pwd, fs_id, seckey, share_id, uk, short, path} = data;
 	const query = {
 		req_id: reqId,
 		surl,
@@ -27,7 +27,8 @@ function doParse(data: WorkerRequestBody, n: number, max: number) {
 		randsk: seckey,
 		share_id,
 		uk,
-		short
+		short,
+		path
 	};
 	request<ParseFileResponse>({
 		url: '/v1/parse/parse_file',

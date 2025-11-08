@@ -227,4 +227,5 @@ export type WorkerRequestBody = Pick<File, 'fs_id'> & ShareInfo & {
 	reqId: string;
 	surl: string;
 	pwd: string;
+	path?: string;
 };

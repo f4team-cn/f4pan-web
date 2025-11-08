@@ -134,8 +134,6 @@ const onNodeExpand = async (node: TreeNode) => {
 		const files = data.list;
 		const { tree } = dealFileList(files);
 		node.children = tree;
-		console.log(node)
-		console.log(expandedKeys.value)
 		log(`打开文件夹 【${node.label}】 成功`);
 	} catch {
 		log(`打开文件夹 【${node.label}】 出错`, 'warning');
@@ -220,7 +218,7 @@ const start = () => {
 				add(child as typeof file);
 			});
 		} else {
-			body.push({ fs_id: file.fs_id, reqId: requestId, surl, pwd, ...shareInfo.value, short });
+			body.push({ fs_id: file.fs_id, reqId: requestId, surl, pwd, ...shareInfo.value, short, path: file.path });
 		}
 	};
 	downloadComponentRef.value?.onStart?.();
@@ -400,9 +398,11 @@ worker.setCallback(onWorkerMessage);
 							<Toolbar>
 								<template #start>
 									<Button icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
-											v-tooltip="'全部展开'" class="mr-2" severity="secondary" @click="expandAllNodes" />
+											v-tooltip="'全部展开'" class="mr-2" severity="secondary"
+											@click="expandAllNodes" />
 									<Button icon="pi pi-arrow-down-left-and-arrow-up-right-to-center"
-											v-tooltip="'全部收起'" class="mr-2" severity="secondary" @click="collapseAllNodes" />
+											v-tooltip="'全部收起'" class="mr-2" severity="secondary"
+											@click="collapseAllNodes" />
 								</template>
 							</Toolbar>
 							<ProgressBar v-if="blocked || treeLoading" mode="indeterminate"
