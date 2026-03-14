@@ -20,7 +20,7 @@ import {
 	onBeforeUnmount,
 	onMounted,
 	reactive,
-	ref
+	ref,
 } from 'vue';
 import { useCacheStore, useSystemConfigStore } from '@/store';
 import { useMessage } from '@/hooks/useMessage';
@@ -29,7 +29,13 @@ import { useWorker } from '@/hooks/useWorker';
 import { renderSize } from '@/utils/render-size';
 import { getFileList } from '@/services/parse';
 import { dealFileList } from '@/utils/deal-file-list';
-import type { ParsedFile, ShareInfo, TreeFileInfo, WorkerRequestBody, WorkerResponse } from '@/types';
+import type {
+	ParsedFile,
+	ShareInfo,
+	TreeFileInfo,
+	WorkerRequestBody,
+	WorkerResponse,
+} from '@/types';
 import type { TreeNode } from 'primevue/treenode';
 import { stringIsEmpty } from '@/utils/string-is-empty';
 import { actionTwo } from '@/utils/show-driver';
@@ -56,9 +62,9 @@ const shareInfo = ref<ShareInfo>({ seckey: '', share_id: '', uk: '' });
 const worker = useWorker();
 const systemStore = useSystemConfigStore();
 const downloadType = ref<{
-	code: DownloadTypeCode | ''
+	code: DownloadTypeCode | '';
 }>({
-	code: ''
+	code: '',
 });
 const expandingAll = ref(false);
 const expandedKeys = ref<Record<string | number, boolean>>({});
@@ -71,20 +77,24 @@ const loggerCollapsedRef = ref(false);
 const { logs, log } = useLogger();
 const downloadComponent = computed<any>(() => {
 	if (downloadType.value.code === '') return null;
-	let type = downloadTypes.filter(v => v.code == downloadType.value.code)[0];
+	let type = downloadTypes.filter((v) => v.code == downloadType.value.code)[0];
 	if (!type) return null;
 	log('切换下载方式:' + downloadType.value.code);
 	// noinspection TypeScriptCheckImport
 	return defineAsyncComponent({
 		loader: () => import(`./download/${type.page}.vue`),
-		loadingComponent: Loading
+		loadingComponent: Loading,
 	});
 });
 const downloadComponentRef = ref<{
-	onStart: () => any,
-	onSuccess: (response: WorkerResponse, rootDir: string | undefined, fileDir: string | undefined) => any,
-	onDone: (results: ParsedFile[]) => any,
-	isValid: () => boolean,
+	onStart: () => any;
+	onSuccess: (
+		response: WorkerResponse,
+		rootDir: string | undefined,
+		fileDir: string | undefined,
+	) => any;
+	onDone: (results: ParsedFile[]) => any;
+	isValid: () => boolean;
 } | null>(null);
 
 const onNextStep = async (element: Element | undefined) => {
@@ -125,10 +135,9 @@ const onNodeExpand = async (node: TreeNode) => {
 	node.loading = true;
 	try {
 		log(`打开文件夹 【${node.label}】 ……`);
-		const { data: response } = await getFileList(requestId, node.path);
+		const { data: response } = await getFileList(requestId, node.path, shareInfo.value);
 		if (response.data.list.length === 0) {
 			log(`文件夹 【${node.label}】 为空`);
-
 		}
 		const { data } = response;
 		const files = data.list;
@@ -151,9 +160,9 @@ const selectFile = (node: TreeNode & TreeFileInfo) => {
 		return;
 	}
 	if (node.children && !node.leaf) {
-		node.children.forEach((child => selectFile(child as typeof node)));
+		node.children.forEach((child) => selectFile(child as typeof node));
 	} else {
-		const found = selectedFiles.value.find(v => v.fs_id === node.fs_id);
+		const found = selectedFiles.value.find((v) => v.fs_id === node.fs_id);
 		if (!found) {
 			log(`选择文件 【${node.label}】`);
 			selectedFiles.value.push(node);
@@ -163,9 +172,9 @@ const selectFile = (node: TreeNode & TreeFileInfo) => {
 
 const unSelectFile = (node: TreeNode & TreeFileInfo) => {
 	if (node.children) {
-		node.children.forEach((child => unSelectFile(child as typeof node)));
+		node.children.forEach((child) => unSelectFile(child as typeof node));
 	} else {
-		const found = selectedFiles.value.findIndex(v => v.fs_id === node.fs_id);
+		const found = selectedFiles.value.findIndex((v) => v.fs_id === node.fs_id);
 		if (found !== -1) {
 			log(`取消选择文件 【${node.label}】`);
 			selectedFiles.value.splice(found, 1);
@@ -186,7 +195,7 @@ const onNodeSelect = (node: TreeNode & TreeFileInfo) => {
 
 const onNodeUnSelect = (node: TreeNode & TreeFileInfo) => {
 	if (!node.leaf) {
-		node?.children?.forEach(child => unSelectFile(child as typeof node));
+		node?.children?.forEach((child) => unSelectFile(child as typeof node));
 		return;
 	}
 	unSelectFile(node);
@@ -214,15 +223,24 @@ const start = () => {
 	const short = downloadType.value.code === 'motrix';
 	const add = (file: TreeFileInfo & TreeNode) => {
 		if (file.children) {
-			file.children.forEach(child => {
+			file.children.forEach((child) => {
 				add(child as typeof file);
 			});
 		} else {
-			body.push({ fs_id: file.fs_id, reqId: requestId, surl, pwd, ...shareInfo.value, short, path: file.path });
+			body.push({
+				fs_id: file.fs_id,
+				reqId: requestId,
+				surl,
+				pwd,
+				...shareInfo.value,
+				short,
+				path: file.path,
+				dlink: file.dlink,
+			});
 		}
 	};
 	downloadComponentRef.value?.onStart?.();
-	selectedFiles.value.forEach(file => {
+	selectedFiles.value.forEach((file) => {
 		add(file);
 	});
 	log('启动后台任务……');
@@ -261,7 +279,7 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 	if (m.type === 'progress') {
 		const max = m.max || 1;
 		const n = m.n || 0;
-		progress.value = Math.round(n / max * 100);
+		progress.value = Math.round((n / max) * 100);
 		log(`更新进度 ${progress.value}%`);
 		return;
 	}
@@ -270,11 +288,18 @@ const onWorkerMessage = async (m: WorkerResponse) => {
 		results.push({
 			id: results.length + 1,
 			filename: m!!.body!!.filename,
-			link: m!!.body!!.dlink
+			link: m!!.body!!.dlink,
 		});
-		const file = selectedFiles.value.find(f => String(f.fs_id) === String(m!!.body!!.filefsid));
-		const rootDir = file?.path?.replace(new RegExp(`/${rndDir.value.replace(/[\[\]]/g, '\\$&')}.*`, 'g'), '');
-		const dir = file?.path?.replace(new RegExp(`^${rootDir}`), '')?.replace(m!!.body!!.filename, '');
+		const file = selectedFiles.value.find(
+			(f) => String(f.fs_id) === String(m!!.body!!.filefsid),
+		);
+		const rootDir = file?.path?.replace(
+			new RegExp(`/${rndDir.value.replace(/[\[\]]/g, '\\$&')}.*`, 'g'),
+			'',
+		);
+		const dir = file?.path
+			?.replace(new RegExp(`^${rootDir}`), '')
+			?.replace(m!!.body!!.filename, '');
 		log(`文件 ${file?.label} 解析完成，正在通知 ${downloadType.value.code} 下载……`);
 		downloadComponentRef.value?.onSuccess?.(m, rootDir, dir);
 	}
@@ -310,7 +335,7 @@ const expandAllNodes = async () => {
 	expandingAll.value = true;
 	blocked.value = true;
 
-	const loadAndExpandNode = async (node: (TreeFileInfo & TreeNode)) => {
+	const loadAndExpandNode = async (node: TreeFileInfo & TreeNode) => {
 		if (node.isdir !== 1 && node.leaf) return;
 		if (!node.path) return;
 		if (node.key !== undefined) {
@@ -333,7 +358,6 @@ const expandAllNodes = async () => {
 					node.children = childrenTree;
 				}
 				log(`文件夹 【${node.label}】 加载成功`);
-
 			} catch (e) {
 				console.error(e);
 				log(`加载文件夹 【${node.label}】 出错`, 'warning');
@@ -359,7 +383,6 @@ const expandAllNodes = async () => {
 			await loadAndExpandNode(rootNode);
 		}
 		log('全部文件夹展开和加载任务完成', 'success');
-
 	} catch (e) {
 		console.error(e);
 		log('全部展开和加载过程中发生错误', 'error');
@@ -380,14 +403,11 @@ onBeforeUnmount(() => {
 });
 
 worker.setCallback(onWorkerMessage);
-
 </script>
 
 <template>
 	<div class="layout-toolbar">
-		<div class="layout-toolbar-logo">
-			开始下载 - <span>F4Pan</span>
-		</div>
+		<div class="layout-toolbar-logo">开始下载 - <span>F4Pan</span></div>
 	</div>
 	<div class="layout-main-container">
 		<div class="layout-main">
@@ -397,37 +417,58 @@ worker.setCallback(onWorkerMessage);
 						<BlockUI :blocked="blocked">
 							<Toolbar>
 								<template #start>
-									<Button icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
-											v-tooltip="'全部展开'" class="mr-2" severity="secondary"
-											@click="expandAllNodes" />
-									<Button icon="pi pi-arrow-down-left-and-arrow-up-right-to-center"
-											v-tooltip="'全部收起'" class="mr-2" severity="secondary"
-											@click="collapseAllNodes" />
+									<Button
+										icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
+										v-tooltip="'全部展开'"
+										class="mr-2"
+										severity="secondary"
+										@click="expandAllNodes"
+									/>
+									<Button
+										icon="pi pi-arrow-down-left-and-arrow-up-right-to-center"
+										v-tooltip="'全部收起'"
+										class="mr-2"
+										severity="secondary"
+										@click="collapseAllNodes"
+									/>
 								</template>
 							</Toolbar>
-							<ProgressBar v-if="blocked || treeLoading" mode="indeterminate"
-										 style="height: 6px"></ProgressBar>
+							<ProgressBar
+								v-if="blocked || treeLoading"
+								mode="indeterminate"
+								style="height: 6px"
+							></ProgressBar>
 							<!--							<Divider class="my-5" />-->
-							<Tree loadingMode="icon" :value="filesRef" selection-mode="checkbox"
-								  @node-expand="onNodeExpand" :loading="treeLoading" @nodeSelect="onNodeSelect"
-								  @nodeUnselect="onNodeUnSelect"
-								  v-model:selectionKeys="selectedFilesOrigin" v-model:expandedKeys="expandedKeys" />
+							<Tree
+								loadingMode="icon"
+								:value="filesRef"
+								selection-mode="checkbox"
+								@node-expand="onNodeExpand"
+								:loading="treeLoading"
+								@nodeSelect="onNodeSelect"
+								@nodeUnselect="onNodeUnSelect"
+								v-model:selectionKeys="selectedFilesOrigin"
+								v-model:expandedKeys="expandedKeys"
+							/>
 						</BlockUI>
 					</Fieldset>
 					<div class="mt-4">
 						<Fieldset legend="解析结果" toggleable :collapsed="!resultViewCollapsedRef">
 							<DataTable :value="results" dataKey="id">
-								<template #empty>
-									暂时任何解析数据！
-								</template>
+								<template #empty> 暂时任何解析数据！ </template>
 								<template #header>
 									<Button @click="copyUserAgent">复制 User-Agent</Button>
 								</template>
 								<Column field="filename" header="文件名"></Column>
 								<Column header="操作">
 									<template #body="item">
-										<Button v-tooltip="'复制链接'" icon="pi pi-copy" rounded class="mb-2 mr-2"
-												@click="copyResult(item.data)" />
+										<Button
+											v-tooltip="'复制链接'"
+											icon="pi pi-copy"
+											rounded
+											class="mb-2 mr-2"
+											@click="copyResult(item.data)"
+										/>
 									</template>
 								</Column>
 							</DataTable>
@@ -439,62 +480,100 @@ worker.setCallback(onWorkerMessage);
 						<ul class="list-none p-0 m-0">
 							<li class="flex flex-row align-items-center justify-content-between">
 								<div>
-									<span class="text-900 font-medium mr-2 mb-1 md:mb-0">已选择的文件</span>
+									<span class="text-900 font-medium mr-2 mb-1 md:mb-0"
+										>已选择的文件</span
+									>
 								</div>
 								<div class="mt-2 md:mt-0 flex align-items-center">
-									<span class="text-blue-500 ml-3 font-medium">{{ selectedFiles.length }}</span>
+									<span class="text-blue-500 ml-3 font-medium">{{
+										selectedFiles.length
+									}}</span>
 								</div>
 							</li>
 							<li class="flex flex-row align-items-center justify-content-between">
 								<div>
-									<span class="text-900 font-medium mr-2 mb-1 md:mb-0">总文件大小</span>
+									<span class="text-900 font-medium mr-2 mb-1 md:mb-0"
+										>总文件大小</span
+									>
 								</div>
 								<div class="mt-2 md:mt-0 flex align-items-center">
 									<span class="text-green-500 ml-3 font-medium">{{
-											renderSize(selectedFiles.map(v => v.size).reduce((a, b) => a + b, 0))
-										}}</span>
+										renderSize(
+											selectedFiles
+												.map((v: TreeFileInfo & TreeNode) => v.size)
+												.reduce((a: number, b: number) => a + b, 0),
+										)
+									}}</span>
 								</div>
 							</li>
 						</ul>
 					</Fieldset>
-					<Fieldset legend="下载配置" class="mt-3 p-fluid" toggleable :disabled="blocked"
-							  id="driver-step-select-download-type">
+					<Fieldset
+						legend="下载配置"
+						class="mt-3 p-fluid"
+						toggleable
+						:disabled="blocked"
+						id="driver-step-select-download-type"
+					>
 						<div class="formgrid grid">
 							<div class="field col">
 								<label for="type">下载方式</label>
-								<Dropdown v-model="downloadType" :disabled="blocked"
-										  :options="downloadTypes"
-										  optionLabel="name" placeholder="选择下载方式" />
+								<Dropdown
+									v-model="downloadType"
+									:disabled="blocked"
+									:options="downloadTypes"
+									optionLabel="name"
+									placeholder="选择下载方式"
+								/>
 							</div>
 						</div>
 						<template v-if="downloadType.code.length !== 0">
 							<component :is="downloadComponent" ref="downloadComponentRef" />
 						</template>
 					</Fieldset>
-					<Fieldset legend="解析日志" toggleable class="mt-3 mb-3" :collapsed="!loggerCollapsedRef">
-						<ScrollPanel class="logger-container" v-if="logs.length !== 0"
-									 :pt="{
+					<Fieldset
+						legend="解析日志"
+						toggleable
+						class="mt-3 mb-3"
+						:collapsed="!loggerCollapsedRef"
+					>
+						<ScrollPanel
+							class="logger-container"
+							v-if="logs.length !== 0"
+							:pt="{
 								wrapper: {
 									style: {
-										'border-right': '10px solid var(--surface-ground)'
-									}
+										'border-right': '10px solid var(--surface-ground)',
+									},
 								},
-								bary: 'hover:bg-primary-400 bg-primary-300 opacity-100'
-							}">
+								bary: 'hover:bg-primary-400 bg-primary-300 opacity-100',
+							}"
+						>
 							<p v-for="log in logs" :data-type="log.type" v-text="log.data"></p>
 						</ScrollPanel>
 						<Skeleton v-else width="100%" height="180px"></Skeleton>
 					</Fieldset>
 					<Fieldset legend="准备下载">
-						<ProgressBar :mode="starting && progress === 0 ? 'indeterminate' : 'determinate'"
-									 v-if="starting"
-									 :value="progress"></ProgressBar>
+						<ProgressBar
+							:mode="starting && progress === 0 ? 'indeterminate' : 'determinate'"
+							v-if="starting"
+							:value="progress"
+						></ProgressBar>
 						<Divider />
 						<ButtonGroup>
-							<Button label="开始" icon="pi pi-check" :disabled="selectedFiles.length === 0 || starting"
-									id="driver-step-done"
-									@click="start" />
-							<Button label="取消" icon="pi pi-times" :disabled="!starting" @click="stop" />
+							<Button
+								label="开始"
+								icon="pi pi-check"
+								:disabled="selectedFiles.length === 0 || starting"
+								id="driver-step-done"
+								@click="start"
+							/>
+							<Button
+								label="取消"
+								icon="pi pi-times"
+								:disabled="!starting"
+								@click="stop"
+							/>
 						</ButtonGroup>
 					</Fieldset>
 				</div>
@@ -513,19 +592,19 @@ worker.setCallback(onWorkerMessage);
 			margin-top: 0;
 			margin-bottom: 0;
 
-			&[data-type="success"] {
+			&[data-type='success'] {
 				color: #16a34a;
 			}
 
-			&[data-type="warning"] {
+			&[data-type='warning'] {
 				color: #ca8a04;
 			}
 
-			&[data-type="info"] {
+			&[data-type='info'] {
 				color: #2563eb;
 			}
 
-			&[data-type="error"] {
+			&[data-type='error'] {
 				color: #dc2626;
 			}
 		}

@@ -1,10 +1,13 @@
 export type LoginResult = {
-	token: string
+	token: string;
 };
 
 export type ParseKeyType = 'dynamic' | 'fixed' | 'none';
 
-export type SystemConfigResult = Pick<SystemSetting, 'requires_key' | 'notice_id' | 'parse_ua' | 'is_active'>;
+export type SystemConfigResult = Pick<
+	SystemSetting,
+	'requires_key' | 'notice_id' | 'parse_ua' | 'is_active'
+>;
 
 export type File = {
 	filename: string;
@@ -12,6 +15,7 @@ export type File = {
 	fs_id: string;
 	isdir: string;
 	size: number;
+	dlink: string;
 };
 
 export type ShareInfo = {
@@ -23,7 +27,7 @@ export type ShareInfo = {
 export type BaseResponse<T> = {
 	code: number;
 	message: string;
-	data: T
+	data: T;
 };
 
 export type RPCConfig = {
@@ -31,12 +35,12 @@ export type RPCConfig = {
 	port: string;
 	token: string;
 	basedir: string;
-	type: 'http' | 'https' | 'ws' | 'wss'
+	type: 'http' | 'https' | 'ws' | 'wss';
 };
 
 export type FileListResult = {
-	list: File[],
-	shareinfo: ShareInfo,
+	list: File[];
+	shareinfo: ShareInfo;
 };
 
 export type TreeFileInfo = {
@@ -47,6 +51,7 @@ export type TreeFileInfo = {
 	size: number;
 	icon: string;
 	fs_id: string;
+	dlink: string;
 };
 
 export type ParsedFile = {
@@ -122,7 +127,7 @@ export type PHPExt = {
 
 export type EnvironmentData = {
 	php_version: string;
-	ext: PHPExt
+	ext: PHPExt;
 };
 
 export type MySQLConfig = {
@@ -157,7 +162,10 @@ export type DailyTotalData = {
 
 export type MakeOptional<T, K extends keyof T> = Partial<Pick<T, K>> & Omit<T, K>;
 
-export function isValidKey(key: string | number | symbol , object: object): key is keyof typeof object {
+export function isValidKey(
+	key: string | number | symbol,
+	object: object,
+): key is keyof typeof object {
 	return key in object;
 }
 
@@ -179,7 +187,10 @@ export type DeleteNoticeResponse = BaseResponse<never>;
 export type UseNoticeResponse = BaseResponse<never>;
 
 export type SystemSettingListResponse = BaseResponse<(SystemSetting & { id: number })[]>;
-export type AddSystemSettingResponse = MakeOptional<BaseResponse<SystemSetting & { id: number }>, 'data'>;
+export type AddSystemSettingResponse = MakeOptional<
+	BaseResponse<SystemSetting & { id: number }>,
+	'data'
+>;
 export type UpdateSystemSettingResponse = MakeOptional<BaseResponse<SystemSetting>, 'data'>;
 export type DeleteSystemSettingResponse = BaseResponse<never>;
 export type UseSystemSettingResponse = BaseResponse<never>;
@@ -193,13 +204,13 @@ export type GenerateApiKeyResponse = BaseResponse<{ key: string }>;
 
 export type GetQrCodeDataResponse = BaseResponse<QrCodeData>;
 export type UnicastQrCodeDataResponse = MakeOptional<BaseResponse<UnicastData>, 'data'>;
-export type GetCookieResponse = BaseResponse<{ cookie: string; }>;
+export type GetCookieResponse = BaseResponse<{ cookie: string }>;
 
 export type CheckEnvironmentResponse = BaseResponse<EnvironmentData>;
 
 export type TestConnectionResponse = BaseResponse<string | undefined>;
 
-export type IPCountResponse = BaseResponse<{ ip_type: number, all_count: number }>;
+export type IPCountResponse = BaseResponse<{ ip_type: number; all_count: number }>;
 
 export type ApiKeyListResponse = BaseResponse<ApiKey[]>;
 export type DeleteApiKeyResponse = BaseResponse<never>;
@@ -214,18 +225,20 @@ export type WorkerResponse = {
 	message?: string;
 	max?: number;
 	n?: number;
-	body?: WorkerResponseBody
+	body?: WorkerResponseBody;
 };
 
 export type WorkerRequest = {
 	type: 'add';
-	body: WorkerRequestBody[]
+	body: WorkerRequestBody[];
 };
 
-export type WorkerRequestBody = Pick<File, 'fs_id'> & ShareInfo & {
-	short?: boolean;
-	reqId: string;
-	surl: string;
-	pwd: string;
-	path?: string;
-};
+export type WorkerRequestBody = Pick<File, 'fs_id'> &
+	ShareInfo & {
+		short?: boolean;
+		reqId: string;
+		surl: string;
+		pwd: string;
+		path?: string;
+		dlink: string;
+	};

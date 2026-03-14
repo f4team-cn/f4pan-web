@@ -1,13 +1,13 @@
-import type {File, TreeFileInfo} from '@/types';
+import type { File, TreeFileInfo } from '@/types';
 
 export function dealFileList(files: File[]) {
 	// 获取网盘中的根目录
 	const _filename = files[0].filename;
 	const _path = files[0].path;
-	const root = _path.replace(_filename, '')
+	const root = _path.replace(_filename, '');
 
 	// 树状结构
-	const tree: TreeFileInfo[] = files.map(file => {
+	const tree: TreeFileInfo[] = files.map((file) => {
 		const dir = Number(file.isdir);
 		return {
 			key: file.fs_id,
@@ -17,10 +17,11 @@ export function dealFileList(files: File[]) {
 			size: file.size,
 			icon: `pi ${dir ? 'pi-folder' : 'pi-file'}`,
 			fs_id: file.fs_id,
+			dlink: file.dlink || '',
 		};
 	});
 	return {
 		tree,
-		root
+		root,
 	};
 }

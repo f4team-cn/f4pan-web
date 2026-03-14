@@ -1,4 +1,4 @@
-import type {ParseFileResponse, WorkerRequestBody, WorkerResponse} from '@/types';
+import type { ParseFileResponse, WorkerRequestBody, WorkerResponse } from '@/types';
 import request from '@/utils/request';
 import delay from '@/utils/delay';
 
@@ -18,7 +18,7 @@ Main.onmessage = async function (e) {
 };
 
 function doParse(data: WorkerRequestBody, n: number, max: number) {
-	const {reqId, surl, pwd, fs_id, seckey, share_id, uk, short, path} = data;
+	const { reqId, surl, pwd, fs_id, seckey, share_id, uk, short, path, dlink } = data;
 	const query = {
 		req_id: reqId,
 		surl,
@@ -28,38 +28,47 @@ function doParse(data: WorkerRequestBody, n: number, max: number) {
 		share_id,
 		uk,
 		short,
-		path
+		path,
 	};
 	request<ParseFileResponse>({
 		url: '/v1/parse/parse_file',
 		params: query,
 		ignore: true,
-		timeout: 1000 * 60 * 3
-	}).then(res => {
-		if (res.data.code === 200) {
-			Main.postMessage({
-				type: 'success',
-				body: res.data.data
-			} as WorkerResponse);
-		} else {
-			Main.postMessage({
-				type: 'error',
-				message: res.data.message
-			} as WorkerResponse);
-		}
-	}).finally(() => {
-		if (n >= max) {
-			setTimeout(() => {
+		timeout: 1000 * 60 * 3,
+		method: 'POST',
+		data: {
+			dlink,
+		},
+	})
+		.then((res) => {
+			if (res.data.code === 200) {
 				Main.postMessage({
-					type: 'done',
-					n, max
+					type: 'success',
+					body: res.data.data,
 				} as WorkerResponse);
-			}, 500);
-		} else {
-			Main.postMessage({
-				type: 'progress',
-				n, max
-			} as WorkerResponse);
-		}
-	}).catch(console.error);
+			} else {
+				Main.postMessage({
+					type: 'error',
+					message: res.data.message,
+				} as WorkerResponse);
+			}
+		})
+		.finally(() => {
+			if (n >= max) {
+				setTimeout(() => {
+					Main.postMessage({
+						type: 'done',
+						n,
+						max,
+					} as WorkerResponse);
+				}, 500);
+			} else {
+				Main.postMessage({
+					type: 'progress',
+					n,
+					max,
+				} as WorkerResponse);
+			}
+		})
+		.catch(console.error);
 }
